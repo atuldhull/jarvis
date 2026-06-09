@@ -1,0 +1,27 @@
+# Python virtual environment
+.venv/
+
+# Local working notes — kept out of the shipped project
+CLAUDE.md
+
+# The Playwright login profile (Phase 3) — holds cookies/sessions. NEVER commit.
+profile/
+
+# Local model files & caches
+*.gguf
+models/
+
+# Voice models — big binaries, re-downloaded with one command (see README).
+# The tiny .onnx.json configs stay in the repo so the voices are documented.
+voices/*.onnx
+
+# Local databases (long-term memory)
+*.db
+
+# Audio scratch files (Phase 4)
+*.wav
+
+# Python noise
+__pycache__/
+*.pyc
+.pytest_cache/

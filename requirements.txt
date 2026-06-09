@@ -1,0 +1,27 @@
+# JARVIS dependencies. Install with:  py -m pip install -r requirements.txt
+# Grows phase by phase. Voice libs (Phase 4+) are listed but commented until needed.
+
+# Phase 1–2 — the text brain + tools
+#   NO pip package required. The brain talks to Ollama's HTTP API via Python's
+#   stdlib (brain/ollama_client.py). Just install Ollama itself and pull a model.
+#   The official `ollama` package is optional and not used.
+
+# Phase 3 — browser control (run `playwright install` after pip install)
+playwright>=1.50
+
+# Phase 6 — credential vault
+keyring>=25
+
+# Phase 4–5 — voice (STT, mic, VAD, wake word). TTS default = Windows' built-in
+#   speech (no dependency); Kokoro/Piper are optional quality upgrades.
+faster-whisper>=1.2          # speech-to-text engine
+sounddevice>=0.5             # microphone capture
+soundfile>=0.12              # read/write wav
+webrtcvad-wheels>=2.0        # "stopped talking" detection (NOT plain webrtcvad on 3.13)
+openwakeword>=0.6            # "Hey Jarvis" wake word (pretrained)
+piper-tts>=1.2               # optional nicer British voice (needs a voice-model download)
+
+# ── Phase 7 (Windows desktop control) ────────────────────────────────────────
+# pywinauto>=0.6
+# comtypes>=1.4.8              # REQUIRED >=1.4.8 for pywinauto on Python 3.13
+# pyautogui>=0.9               # last-resort pixel/keyboard fallback
