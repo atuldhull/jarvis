@@ -24,18 +24,31 @@ _ctx = None
 _pw = None
 
 
-def _page_handle():
-    """Launch (once) and return the live browser page."""
-    global _page, _ctx, _pw
-    if _page is not None:
-        return _page
+def _context_handle():
+    """Launch (once) and return the persistent browser context.
+
+    One context = one logged-in profile shared by every browser-based tool, so a
+    site you log into once (WhatsApp Web, YouTube, …) stays logged in everywhere.
+    """
+    global _ctx, _pw
+    if _ctx is not None:
+        return _ctx
     from playwright.sync_api import sync_playwright
 
     _pw = sync_playwright().start()
     _ctx = _pw.chromium.launch_persistent_context(
         config.BROWSER_PROFILE, channel="msedge", headless=False, no_viewport=True
     )
-    _page = _ctx.pages[0] if _ctx.pages else _ctx.new_page()
+    return _ctx
+
+
+def _page_handle():
+    """Launch (once) and return the live browser page."""
+    global _page
+    if _page is not None:
+        return _page
+    ctx = _context_handle()
+    _page = ctx.pages[0] if ctx.pages else ctx.new_page()
     return _page
 
 

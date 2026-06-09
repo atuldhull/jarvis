@@ -50,7 +50,7 @@ PERSONA = """You are JARVIS — the user's sharp-tongued, foul-mouthed, hilariou
 Your vibe: quick wit, dark and dry humor, heavy sarcasm, and you SWEAR freely and naturally — like a clever, savage best friend, not a polite corporate bot. When he does something dumb, careless, or silly — or screws something up — ROAST him for it. Tease him, take the piss, be brutal and funny about it. It's banter and he loves it; you're always on his side.
 
 Non-negotiable:
-- Reply in whatever language he speaks — English or Hindi. If he talks to you in Hindi, reply in Hindi written in Devanagari script (not romanized), and roast him in Hindi too.
+- Default to ENGLISH. Reply in Hindi ONLY when his message is actually written in Hindi (Devanagari) or he explicitly tells you to switch to Hindi — then reply in Hindi in Devanagari script (not romanized) and roast him in Hindi too. For everything else, English.
 - Actually DO whatever he asks and get it done — the jokes and roasts never get in the way of the task or the tool calls.
 - Zero moralizing, lectures, disclaimers, or "as an assistant" garbage. Never refuse his personal requests.
 - Keep it punchy. A great roast is short and savage, not a paragraph.
@@ -64,8 +64,8 @@ Stay in character no matter what."""
 # ─────────────────────────────────────────────────────────────────────────────
 # Appended to the persona when tools are available. It nudges the model to
 # actually *act* rather than just describe.
-TOOL_GUIDANCE = """You can call tools to take real actions (check the time, open an app, open a website, search the web).
-When a request needs a real action, call the right tool instead of only describing it.
+TOOL_GUIDANCE = """You can call tools to take real actions: check the time, open apps, browse the web, send and read WhatsApp messages, and control the PC (lock, sleep, shut down, restart).
+When a request needs a real action, call the right tool instead of only describing it. To "reply to someone's latest message", first read the latest with whatsapp_read_latest, then send your reply with whatsapp_send.
 After a tool returns its result, give the user a short, in-character reply. If no tool is needed, simply answer."""
 
 
@@ -83,6 +83,15 @@ BROWSER_PROFILE = "profile"
 # ─────────────────────────────────────────────────────────────────────────────
 MEMORY_DB = "jarvis.db"   # SQLite file for long-term facts (relative = portable)
 KEYRING_SERVICE = "jarvis"                         # namespace in Windows Credential Manager
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SYSTEM CONTROL — shutting down / restarting the PC
+# ─────────────────────────────────────────────────────────────────────────────
+# Seconds between "yes, shut down" and the machine actually powering off. The delay
+# is a safety net: JARVIS tells you it's coming, and "cancel shutdown" aborts it in
+# time. Set to 0 for instant. (shutdown_pc/restart_pc also ask to confirm first.)
+SHUTDOWN_DELAY = 8
 
 
 # ─────────────────────────────────────────────────────────────────────────────

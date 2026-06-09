@@ -13,9 +13,10 @@ from . import web           # noqa: F401,E402
 from . import files         # noqa: F401,E402
 from . import memory_tools  # noqa: F401,E402
 
-# Browser tools (Phase 3) need Playwright. Importing is safe even before it's
+# Browser + WhatsApp tools need Playwright. Importing is safe even before it's
 # installed — the import just no-ops, and the tools simply won't be on the menu.
 try:
-    from . import browser  # noqa: F401,E402
+    from . import browser    # noqa: F401,E402
+    from . import whatsapp   # noqa: F401,E402
 except Exception:
     pass
