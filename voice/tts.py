@@ -1,44 +1,74 @@
-"""Voice — text-to-speech, bilingual.
+"""Voice — text-to-speech. Sarvam (Indian languages) first, local Piper fallback.
 
-Picks the voice by the reply's language: Hindi (Devanagari script) → Indian voice
-(config.PIPER_MODEL_HI), everything else → British voice (config.PIPER_MODEL). Falls
-back to Windows' built-in speech if Piper fails. More voices at
-huggingface.co/rhasspy/piper-voices.
+The reply's language is read from its script: Kannada → kn, Devanagari → hi, else en.
+Sarvam (if a key is set) speaks all three naturally — including Kannada, which the local
+Piper voices can't. Without Sarvam it falls back to Piper (British for English, Indian for
+Hindi) and finally the built-in Windows voice. More Piper voices: huggingface.co/rhasspy/piper-voices.
 """
 
 import re
 import wave
 
 import config
+from voice import sarvam
 
 _voices = {}
-_DEVANAGARI = re.compile(r"[ऀ-ॿ]")  # Hindi script range
+_DEVANAGARI = re.compile(r"[ऀ-ॿ]")   # Hindi
+_KANNADA = re.compile(r"[ಀ-೿]")      # Kannada
+
+
+def _lang_of(text: str) -> str:
+    if _KANNADA.search(text):
+        return "kn"
+    if _DEVANAGARI.search(text):
+        return "hi"
+    return "en"
+
+
+def say(text: str):
+    if not text:
+        return
+    lang = _lang_of(text)
+    # Sarvam first (natural Indian voices incl. Kannada); else the local stack.
+    if sarvam.available():
+        audio = sarvam.tts(text, lang)
+        if audio:
+            _play_bytes(audio)
+            return
+    _piper(text, lang)
+
+
+def _play_bytes(wav_bytes: bytes):
+    import winsound
+    with open("_tts.wav", "wb") as f:
+        f.write(wav_bytes)
+    winsound.PlaySound("_tts.wav", winsound.SND_FILENAME)  # blocks until done
 
 
 def _load(path):
     if path not in _voices:
         from piper import PiperVoice
-
         _voices[path] = PiperVoice.load(path)
     return _voices[path]
 
 
-def say(text: str):
+def _piper(text: str, lang: str):
+    # Piper has no Kannada voice, so Kannada without Sarvam goes to the Windows voice.
+    if lang == "kn":
+        _say_windows(text)
+        return
     try:
         import winsound
-
-        # Hindi script → Indian voice; otherwise the British voice.
-        path = config.PIPER_MODEL_HI if _DEVANAGARI.search(text) else config.PIPER_MODEL
+        path = config.PIPER_MODEL_HI if lang == "hi" else config.PIPER_MODEL
         with wave.open("_tts.wav", "wb") as wav_file:
             _load(path).synthesize_wav(text, wav_file)
-        winsound.PlaySound("_tts.wav", winsound.SND_FILENAME)  # blocks until done speaking
+        winsound.PlaySound("_tts.wav", winsound.SND_FILENAME)
     except Exception:
         _say_windows(text)  # fall back to the built-in voice if Piper fails
 
 
 def _say_windows(text: str):
     import subprocess
-
     safe = text.replace("'", "''")
     subprocess.run([
         "powershell", "-NoProfile", "-Command",

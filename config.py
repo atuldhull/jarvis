@@ -198,6 +198,18 @@ STT_LANGUAGE = None          # None = auto-detect the language you speak (Hindi 
 PIPER_MODEL = "voices/en_GB-alan-medium.onnx"        # British voice for English replies
 PIPER_MODEL_HI = "voices/hi_IN-pratham-medium.onnx"  # Indian voice for Hindi replies
 
+# ── Multilingual voice (Sarvam — Indian languages incl. Kannada/Hindi/Hinglish) ──
+# Optional cloud STT/TTS for natural Indian-language speech. Falls back to the local
+# faster-whisper + Piper stack automatically when there's no key or you're offline.
+# Get a key at https://dashboard.sarvam.ai → put it in keys.json ("sarvam": ["..."])
+# or env SARVAM_KEY. Set SARVAM_ENABLED = False to force the local voice stack.
+SARVAM_ENABLED = True
+SARVAM_STT_MODEL = "saarika:v2"      # Sarvam ASR (auto-detects the spoken language)
+SARVAM_TTS_MODEL = "bulbul:v2"       # Sarvam TTS
+SARVAM_TTS_SPEAKER = "anushka"       # a Bulbul voice — swap freely (see Sarvam docs)
+# Languages JARVIS will understand/speak. Detected language drives the reply + voice.
+SUPPORTED_LANGS = ["en", "hi", "kn"]  # English, Hindi, Kannada (+ Hinglish/mixed)
+
 WAKEWORD = "hey_jarvis"      # openWakeWord ships this pretrained model
 WAKEWORD_THRESHOLD = 0.5     # raise to 0.6–0.7 if it false-triggers in your room
 

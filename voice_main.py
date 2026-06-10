@@ -12,7 +12,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8")
 
 import config
-from brain.agent import Agent
+from agents.orchestrator import Orchestrator
 from ears.mic import record_to_wav
 from ears.stt import STT
 from ears.wakeword import WakeWord
@@ -23,7 +23,7 @@ def main():
     print("Loading voice stack (first run downloads models)...")
     wake = WakeWord()
     stt = STT()
-    jarvis = Agent()
+    jarvis = Orchestrator()  # full brain: memory + departments + task routing
     print(f"Ready. Say 'Hey Jarvis' to wake me (brain: {config.MODEL}).")
 
     while True:
@@ -37,7 +37,7 @@ def main():
             say("Until next time, sir.")
             break
         try:
-            reply = jarvis.run(text)
+            reply = jarvis.handle(text, lang=stt.last_lang)  # reply in the spoken language
         except Exception as e:
             print("JARVIS: (error)", e)
             say("My apologies, sir — I had trouble just then. Please try again.")

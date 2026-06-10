@@ -2,5 +2,6 @@
   "_readme": "Copy this file to keys.json (which is git-ignored) and paste your FREE API keys. Add as many per provider as you have — the router load-balances across all of them and fails over when one is rate-limited or out of quota. Leave a provider's list empty to skip it. Where to get keys: see docs/MODEL_ROUTER.md.",
   "gemini": ["PASTE_GEMINI_KEY_1", "PASTE_GEMINI_KEY_2"],
   "groq": ["PASTE_GROQ_KEY_1", "PASTE_GROQ_KEY_2"],
-  "openrouter": ["PASTE_OPENROUTER_KEY_1"]
+  "openrouter": ["PASTE_OPENROUTER_KEY_1"],
+  "sarvam": ["PASTE_SARVAM_KEY_for_voice_in_Indian_languages"]
 }

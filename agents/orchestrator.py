@@ -69,6 +69,23 @@ _COMPLEX_PHRASES = (
     "and summarize", "and analyze", "and email", "and message", "and build", "; then",
 )
 
+# Spoken-language → reply-language directive (voice mode passes a detected language).
+_LANG_NAMES = {"en": "English", "hi": "Hindi (Devanagari script)", "kn": "Kannada (Kannada script)"}
+
+
+def _lang_directive(lang):
+    name = _LANG_NAMES.get(lang)
+    if not name:
+        return ""
+    # Goes in the USER turn (most-obeyed position) to override the persona's English default.
+    return (f"(Write your ENTIRE reply in {name} — ignore your default-language habit, "
+            f"and don't say you can't, you can.)")
+
+
+def _apply_lang(text, lang):
+    d = _lang_directive(lang)
+    return f"{d}\n\n{text}" if d else text
+
 
 class Orchestrator:
     def __init__(self):
@@ -83,43 +100,45 @@ class Orchestrator:
             print(f"[orchestrator] {line}", file=sys.stderr)
 
     # ── entry point ─────────────────────────────────────────────────────────────
-    def handle(self, user_text: str) -> str:
+    def handle(self, user_text: str, lang: str = None) -> str:
+        """Handle a turn. `lang` (e.g. 'hi','kn' from voice STT) forces the reply language."""
         recall = self.memory.recall_context(user_text) if self.memory else ""
-        reply = self._respond(user_text, recall)
+        reply = self._respond(user_text, recall, lang)
         if self.memory:
             self.memory.capture_async(user_text, reply)  # learn from this turn, in background
         return reply
 
-    def _respond(self, user_text: str, recall: str) -> str:
+    def _respond(self, user_text: str, recall: str, lang: str = None) -> str:
+        eff = _apply_lang(user_text, lang)  # reply-language directive rides in the user turn
         if not self._looks_complex(user_text):
             self.general.set_memory_context(recall)
-            return self.general.run(user_text)  # fast path: everyday assistant
+            return self.general.run(eff)  # fast path: everyday assistant
 
         self._log("complex request → planning…")
         steps = self._plan(user_text)
         if not steps:
             self._log("planning failed → handling as a single general request")
             self.general.set_memory_context(recall)
-            return self.general.run(user_text)
+            return self.general.run(eff)
 
         if len(steps) == 1:
             s = steps[0]
             self._log(f"single step → {s['agent']}")
             if s["agent"] == "general":
                 self.general.set_memory_context(recall)
-                return self.general.run(user_text)  # keep conversational memory + persona
+                return self.general.run(eff)  # keep conversational memory + persona
             # Route the lone specialist result through aggregation so the reply gets
             # the full persona and the deterministic language handling.
             agent = make_agent(s["agent"])
             agent.set_memory_context(recall)
             result = agent.run(s["task"])
-            return self._aggregate(user_text, [(s["id"], s["agent"], result)], recall)
+            return self._aggregate(user_text, [(s["id"], s["agent"], result)], recall, lang)
 
         depts = ", ".join(sorted({s["agent"] for s in steps}))
         self._log(f"running {len(steps)} steps across {depts}")
         results = self._execute(steps, recall)
         self._log("aggregating results…")
-        return self._aggregate(user_text, results, recall)
+        return self._aggregate(user_text, results, recall, lang)
 
     # ── 1. classify (heuristic) ─────────────────────────────────────────────────
     def _looks_complex(self, text: str) -> bool:
@@ -210,20 +229,22 @@ class Orchestrator:
         return agent.run(task)
 
     # ── 4. aggregate ─────────────────────────────────────────────────────────────
-    def _aggregate(self, user_text, results, recall=""):
+    def _aggregate(self, user_text, results, recall="", lang=None):
         block = "\n\n".join(f"[{sid} - {agent}]:\n{text}" for sid, agent, text in results)
         # Decide the reply language deterministically — small models don't reliably
-        # obey a conditional rule, so we detect the user's script and force it.
-        hindi = bool(re.search(r"[ऀ-ॿ]", user_text))
-        lang = ("Reply in Hindi, Devanagari script." if hindi
-                else "Reply in ENGLISH only, no Hindi.")
-        system = AGGREGATION_PROMPT + f"\n\nIMPORTANT: {lang}"
+        # obey a conditional rule. A voice-detected `lang` wins; else detect by script.
+        directive = _lang_directive(lang)
+        if not directive:
+            hindi = bool(re.search(r"[ऀ-ॿ]", user_text))
+            directive = ("Reply in Hindi, Devanagari script." if hindi
+                         else "Reply in ENGLISH only, no Hindi.")
+        system = AGGREGATION_PROMPT + f"\n\nIMPORTANT: {directive}"
         if recall:
             system += "\n\n" + recall
         msg = chat(
             [{"role": "system", "content": system},
              {"role": "user",
-              "content": f"User's original request:\n{user_text}\n\nResults from each step:\n{block}\n\nWrite the final reply."}],
+              "content": f"User's original request:\n{user_text}\n\nResults from each step:\n{block}\n\n{directive}\nWrite the final reply."}],
             options={"temperature": config.TEMPERATURE},
             route="planning",  # reasoning/synthesis gets its own Gemini key
         )
