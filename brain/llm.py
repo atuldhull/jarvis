@@ -10,7 +10,7 @@ the model and the rest of the project stays simple.
 """
 
 import config
-from brain.ollama_client import chat
+from brain.router import chat  # routed across cloud + local brains (falls back to local)
 
 
 class Brain:
@@ -25,8 +25,8 @@ class Brain:
         # 1. Remember what the user said.
         self.messages.append({"role": "user", "content": user_text})
 
-        # 2. Ask the local model, giving it the whole conversation for context.
-        message = chat(self.model, self.messages, options={"temperature": config.TEMPERATURE})
+        # 2. Ask the best available brain, giving it the whole conversation for context.
+        message = chat(self.messages, options={"temperature": config.TEMPERATURE})
         reply = (message.get("content") or "").strip()
 
         # 3. Remember JARVIS's own reply too, so the next turn has memory.

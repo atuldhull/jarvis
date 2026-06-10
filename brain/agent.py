@@ -10,7 +10,7 @@ import json
 
 import config
 import safety
-from brain.ollama_client import chat
+from brain.router import chat  # routed across cloud + local brains (falls back to local)
 from tools import schemas, dispatch, needs_confirm
 
 
@@ -27,7 +27,6 @@ class Agent:
 
         for _ in range(max_steps):
             message = chat(
-                self.model,
                 self.messages,
                 tools=schemas(),
                 options={"temperature": config.TEMPERATURE},
@@ -55,9 +54,14 @@ class Agent:
                     except Exception as e:
                         result = f"(tool error: {e})"
 
-                self.messages.append(
-                    {"role": "tool", "content": str(result), "tool_name": name}
-                )
+                # Canonical tool result: tool_call_id (for OpenAI-style providers)
+                # and name (for Gemini/Ollama) so the loop works on any brain.
+                self.messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.get("id", ""),
+                    "name": name,
+                    "content": str(result),
+                })
 
         return "I appear to be going in circles, sir — perhaps a simpler request?"
 

@@ -7,6 +7,10 @@ CLAUDE.md
 # The Playwright login profile (Phase 3) — holds cookies/sessions. NEVER commit.
 profile/
 
+# Real API keys for the model router — SECRETS. Only keys.example.json is shared.
+keys.json
+.env
+
 # Local model files & caches
 *.gguf
 models/

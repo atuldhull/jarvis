@@ -39,6 +39,42 @@ KEEP_ALIVE = "30m"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# THE MODEL ROUTER (hybrid brains: free cloud when online, local when not)
+# ─────────────────────────────────────────────────────────────────────────────
+# JARVIS can think with fast/smart FREE cloud models when you're online, and fall
+# back to your local Ollama model automatically when you're offline or every cloud
+# key is used up. Set ROUTER_ENABLED = False to stay 100% local & private.
+ROUTER_ENABLED = True
+
+# Try providers in this order while online; "local" is ALWAYS the final safety net.
+# A provider with no keys is silently skipped, so this list is safe as-is even
+# before you've added any keys (JARVIS just runs locally until you do).
+PROVIDER_PRIORITY = ["gemini", "groq", "openrouter", "local"]
+
+# Which model to use on each provider — all free-tier picks; swap freely.
+PROVIDER_MODELS = {
+    "gemini": "gemini-2.0-flash",
+    "groq": "llama-3.3-70b-versatile",
+    "openrouter": "meta-llama/llama-3.3-70b-instruct:free",
+    "local": MODEL,  # your Ollama model (set above)
+}
+
+# How long (seconds) a key/provider is benched after trouble, before it's retried.
+COOLDOWN_RATE_LIMIT = 60      # hit a per-minute rate limit → rest briefly
+COOLDOWN_QUOTA = 3600         # daily/quota used up → rest a while
+COOLDOWN_AUTH = 86400         # bad/blocked key → basically park it for the day
+COOLDOWN_OFFLINE = 30         # provider unreachable (no internet) → lean on local
+
+# Real keys live in keys.json (git-ignored) and/or env vars GEMINI_KEY_1, GROQ_KEY_1,
+# OPENROUTER_KEY_1, … (numbered, as many as you have). See docs/MODEL_ROUTER.md.
+KEYS_FILE = "keys.json"
+
+# Print a one-line note (to stderr) when the router fails over between keys/providers,
+# so you can watch the load-balancing work. Set False to silence it.
+ROUTER_VERBOSE = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # THE PERSONA (who JARVIS *is*)
 # ─────────────────────────────────────────────────────────────────────────────
 # This is the single most powerful personality knob in the whole project — and it
