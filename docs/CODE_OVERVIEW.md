@@ -1,8 +1,10 @@
-# JARVIS — Code Overview (what's built so far)
+# JARVIS — Code Overview (the foundation)
 
-> A map of the actual code (not the planning docs), so it's easy to see where things
-> stand. Build order follows [BUILD_GUIDE_MINUTE.md](BUILD_GUIDE_MINUTE.md).
-> Everything is **text-first**; voice (Phase 4/5) is not wired into the runtime yet.
+> A map of the original foundation code. The project has since grown a full OS layer on
+> top — the orchestrator + specialist departments, the model router, semantic memory, and
+> the voice stack. For the current architecture see [AGENTS.md](AGENTS.md),
+> [MODEL_ROUTER.md](MODEL_ROUTER.md), [MEMORY.md](MEMORY.md), and [MULTILINGUAL.md](MULTILINGUAL.md).
+> This file still describes the core loop everything is built on, which hasn't changed.
 
 ## Run it
 

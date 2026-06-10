@@ -20,7 +20,7 @@ Two layers make it work, and both **degrade gracefully**:
    can't do). No key / offline → it falls straight back to local **faster-whisper + Piper**.
 2. **Reply language — the brain.** The detected language is passed to the orchestrator,
    which forces the reply into that language (overriding the default-English habit) while
-   keeping JARVIS's persona. Verified live: ask in any language, get Kannada/Hindi/English back.
+   keeping JARVIS's persona. In practice: ask in any language, get Kannada/Hindi/English back.
 
 ---
 
@@ -51,9 +51,9 @@ Kannada needs Sarvam). Set `SARVAM_ENABLED = False` in `config.py` to force loca
 
 ## Status
 
-- ✅ **Reply-language switching** — verified live (Kannada / Hindi / English, persona kept).
+- ✅ **Reply-language switching** — working (Kannada / Hindi / English, persona kept).
 - ✅ **Graceful fallback** — no key → local faster-whisper + Piper; never breaks the voice loop.
-- ✅ **Sarvam STT/TTS** — verified live: Hindi round-trip (synthesize → transcribe) works,
+- ✅ **Sarvam STT/TTS** — Hindi round-trip (synthesize → transcribe) works,
   language auto-detected. Models: TTS `bulbul:v2`, STT `saarika:v2.5`. Fixes the local
   Whisper-base bug where Hindi/Kannada came out as Arabic.
 
