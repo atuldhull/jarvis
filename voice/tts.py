@@ -38,6 +38,32 @@ def say(text: str):
     _piper(text, lang)
 
 
+def synth_bytes(text: str):
+    """Return WAV bytes for `text` (Sarvam if available, else Piper) WITHOUT playing it.
+
+    Used by the LiveKit pipeline, which wants the audio bytes rather than speaker output.
+    Returns None if nothing could synthesize it (e.g. Kannada with no Sarvam key).
+    """
+    if not text:
+        return None
+    lang = _lang_of(text)
+    if sarvam.available():
+        audio = sarvam.tts(text, lang)
+        if audio:
+            return audio
+    if lang == "kn":
+        return None  # no local Kannada voice
+    try:
+        import io
+        path = config.PIPER_MODEL_HI if lang == "hi" else config.PIPER_MODEL
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wav_file:
+            _load(path).synthesize_wav(text, wav_file)
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
 def _play_bytes(wav_bytes: bytes):
     import winsound
     with open("_tts.wav", "wb") as f:

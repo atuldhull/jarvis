@@ -21,6 +21,10 @@ webrtcvad-wheels>=2.0        # "stopped talking" detection (NOT plain webrtcvad 
 openwakeword>=0.6            # "Hey Jarvis" wake word (pretrained)
 piper-tts>=1.2               # optional nicer British voice (needs a voice-model download)
 
+# ── Phase 8 — conversational voice (LiveKit: turn-taking, interruptions, streaming)
+livekit-agents>=1.0          # the real-time voice agent framework (console mode = local mic)
+livekit-plugins-silero       # local voice-activity detection (no key)
+
 # ── Phase 7 (Windows desktop control) ────────────────────────────────────────
 # pywinauto>=0.6
 # comtypes>=1.4.8              # REQUIRED >=1.4.8 for pywinauto on Python 3.13
