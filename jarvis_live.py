@@ -38,6 +38,13 @@ async def entrypoint(ctx: JobContext):
         stt=ears,
         llm=JarvisLLM(Orchestrator(), ears),
         tts=JarvisTTS(),
+        # Don't fire speculative LLM calls on interim transcripts — our brain can be
+        # several calls per turn and that was burning the free-tier quota fast.
+        preemptive_generation=False,
+        # Wait a little longer after you pause before deciding your turn ended, so it
+        # stops chopping sentences into fragments ("Desktop.", "He always", …).
+        min_endpointing_delay=0.8,
+        min_interruption_words=2,      # ignore one-word noise as a "barge-in"
     )
     await session.start(
         agent=Agent(instructions="You are JARVIS. Your real persona and brain are the orchestrator."),

@@ -80,8 +80,11 @@ class Agent:
                 name = call["function"]["name"]
                 args = call["function"]["arguments"]
                 if isinstance(args, str):
-                    args = json.loads(args or "{}")
-                args = dict(args)
+                    try:
+                        args = json.loads(args or "{}")
+                    except Exception:
+                        args = {}
+                args = dict(args) if isinstance(args, dict) else {}  # tolerate null/odd args
 
                 if self.tool_names is not None and name not in self.tool_names:
                     # The model reached for a tool outside this department's scope.
