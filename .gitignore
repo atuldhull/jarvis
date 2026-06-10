@@ -19,8 +19,10 @@ models/
 # The tiny .onnx.json configs stay in the repo so the voices are documented.
 voices/*.onnx
 
-# Local databases (long-term memory)
+# Local databases (long-term memory) + SQLite WAL sidecar files
 *.db
+*.db-wal
+*.db-shm
 
 # Audio scratch files (Phase 4)
 *.wav

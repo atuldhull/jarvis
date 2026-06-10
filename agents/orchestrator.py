@@ -19,7 +19,9 @@ import sys
 
 import config
 from brain.router import chat
+from brain.jsonutil import extract_json
 from agents.roster import make_agent, DEPARTMENTS, roster_brief
+from memory.manager import MemoryManager
 
 
 # ── Prompts (designed for strict, unambiguous JSON from a small local model) ───
@@ -73,6 +75,7 @@ class Orchestrator:
         self.general = make_agent("general")  # persistent → keeps conversational memory
         self.workers = getattr(config, "ORCH_MAX_WORKERS", 3)
         self.last_plan = None  # the most recent task graph, for inspection/dashboard
+        self.memory = MemoryManager() if getattr(config, "MEMORY_ENABLED", True) else None
 
     # ── logging ────────────────────────────────────────────────────────────────
     def _log(self, line):
@@ -81,30 +84,42 @@ class Orchestrator:
 
     # ── entry point ─────────────────────────────────────────────────────────────
     def handle(self, user_text: str) -> str:
+        recall = self.memory.recall_context(user_text) if self.memory else ""
+        reply = self._respond(user_text, recall)
+        if self.memory:
+            self.memory.capture_async(user_text, reply)  # learn from this turn, in background
+        return reply
+
+    def _respond(self, user_text: str, recall: str) -> str:
         if not self._looks_complex(user_text):
+            self.general.set_memory_context(recall)
             return self.general.run(user_text)  # fast path: everyday assistant
 
         self._log("complex request → planning…")
         steps = self._plan(user_text)
         if not steps:
             self._log("planning failed → handling as a single general request")
+            self.general.set_memory_context(recall)
             return self.general.run(user_text)
 
         if len(steps) == 1:
             s = steps[0]
             self._log(f"single step → {s['agent']}")
             if s["agent"] == "general":
+                self.general.set_memory_context(recall)
                 return self.general.run(user_text)  # keep conversational memory + persona
             # Route the lone specialist result through aggregation so the reply gets
             # the full persona and the deterministic language handling.
-            result = make_agent(s["agent"]).run(s["task"])
-            return self._aggregate(user_text, [(s["id"], s["agent"], result)])
+            agent = make_agent(s["agent"])
+            agent.set_memory_context(recall)
+            result = agent.run(s["task"])
+            return self._aggregate(user_text, [(s["id"], s["agent"], result)], recall)
 
         depts = ", ".join(sorted({s["agent"] for s in steps}))
         self._log(f"running {len(steps)} steps across {depts}")
-        results = self._execute(steps)
+        results = self._execute(steps, recall)
         self._log("aggregating results…")
-        return self._aggregate(user_text, results)
+        return self._aggregate(user_text, results, recall)
 
     # ── 1. classify (heuristic) ─────────────────────────────────────────────────
     def _looks_complex(self, text: str) -> bool:
@@ -133,7 +148,7 @@ class Orchestrator:
         return None
 
     def _parse_plan(self, text):
-        data = _extract_json(text)
+        data = extract_json(text)
         if not isinstance(data, dict):
             return None
         steps = data.get("steps")
@@ -158,7 +173,7 @@ class Orchestrator:
         return steps
 
     # ── 3. execute (parallel waves over the dependency graph) ────────────────────
-    def _execute(self, steps):
+    def _execute(self, steps, recall=""):
         by_id = {s["id"]: s for s in steps}
         done = {}
         pending = {s["id"] for s in steps}
@@ -170,7 +185,7 @@ class Orchestrator:
                     for sid in pending:
                         done[sid] = "(step skipped: unresolved dependencies)"
                     break
-                futures = {ex.submit(self._run_step, by_id[sid], done): sid for sid in ready}
+                futures = {ex.submit(self._run_step, by_id[sid], done, recall): sid for sid in ready}
                 for fut in concurrent.futures.as_completed(futures):
                     sid = futures[fut]
                     try:
@@ -182,7 +197,7 @@ class Orchestrator:
         # Return in the planner's original order for a stable aggregation prompt.
         return [(s["id"], s["agent"], done.get(s["id"], "")) for s in steps]
 
-    def _run_step(self, step, done):
+    def _run_step(self, step, done, recall=""):
         self._log(f"{step['id']} ({step['agent']}) running…")
         deps = step["depends_on"]
         if deps:
@@ -190,18 +205,23 @@ class Orchestrator:
             task = (f"Context from earlier steps:\n{context}\n\nYour task: {step['task']}")
         else:
             task = step["task"]
-        return make_agent(step["agent"]).run(task)
+        agent = make_agent(step["agent"])
+        agent.set_memory_context(recall)  # let specialists use what's known about the user
+        return agent.run(task)
 
     # ── 4. aggregate ─────────────────────────────────────────────────────────────
-    def _aggregate(self, user_text, results):
+    def _aggregate(self, user_text, results, recall=""):
         block = "\n\n".join(f"[{sid} - {agent}]:\n{text}" for sid, agent, text in results)
         # Decide the reply language deterministically — small models don't reliably
         # obey a conditional rule, so we detect the user's script and force it.
         hindi = bool(re.search(r"[ऀ-ॿ]", user_text))
         lang = ("Reply in Hindi, Devanagari script." if hindi
                 else "Reply in ENGLISH only, no Hindi.")
+        system = AGGREGATION_PROMPT + f"\n\nIMPORTANT: {lang}"
+        if recall:
+            system += "\n\n" + recall
         msg = chat(
-            [{"role": "system", "content": AGGREGATION_PROMPT + f"\n\nIMPORTANT: {lang}"},
+            [{"role": "system", "content": system},
              {"role": "user",
               "content": f"User's original request:\n{user_text}\n\nResults from each step:\n{block}\n\nWrite the final reply."}],
             options={"temperature": config.TEMPERATURE},
@@ -211,34 +231,3 @@ class Orchestrator:
 
     def reset(self):
         self.general.reset()
-
-
-def _extract_json(text):
-    """Pull the first balanced {...} object out of a model reply (tolerates fences/prose)."""
-    text = text.strip()
-    start = text.find("{")
-    if start == -1:
-        return None
-    depth, in_str, esc = 0, False, False
-    for i in range(start, len(text)):
-        c = text[i]
-        if in_str:
-            if esc:
-                esc = False
-            elif c == "\\":
-                esc = True
-            elif c == '"':
-                in_str = False
-        else:
-            if c == '"':
-                in_str = True
-            elif c == "{":
-                depth += 1
-            elif c == "}":
-                depth -= 1
-                if depth == 0:
-                    try:
-                        return json.loads(text[start:i + 1])
-                    except Exception:
-                        return None
-    return None

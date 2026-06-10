@@ -1,10 +1,10 @@
 """Memory tools — let JARVIS store and recall facts about you on its own."""
 
-from memory.store import Memory
+from memory.store import get_memory
 
 from .registry import tool
 
-_mem = Memory()  # one shared store for the running session
+_mem = get_memory()  # the process-wide store (shared with the orchestrator's MemoryManager)
 
 
 @tool(
@@ -35,3 +35,18 @@ def remember_fact(key, value):
 def recall_fact(key):
     value = _mem.recall(key)
     return value if value is not None else f"(nothing remembered for '{key}')"
+
+
+@tool(
+    "search_memory",
+    "Search long-term memory by MEANING for things known about the user "
+    "(e.g. 'what hardware does he have', 'his preferences'). Use when recall_fact's exact key won't do.",
+    {
+        "type": "object",
+        "properties": {"query": {"type": "string", "description": "What to look up."}},
+        "required": ["query"],
+    },
+)
+def search_memory(query):
+    hits = _mem.search(query, k=5)
+    return "\n".join(f"- {h}" for h in hits) if hits else "(nothing relevant in memory)"

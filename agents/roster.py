@@ -83,7 +83,7 @@ DEPARTMENTS = {
         "system_prompt": RESEARCH_PROMPT,
         "tools": ["browser_open", "browser_read", "browser_click", "browser_type",
                   "web_search", "open_website", "find_files", "read_text_file",
-                  "remember_fact", "recall_fact"],
+                  "remember_fact", "recall_fact", "search_memory"],
     },
     "software": {
         "title": "Software Engineering",
@@ -91,7 +91,7 @@ DEPARTMENTS = {
         "when_to_use": "code to write/debug/refactor/review, or architecture/API/schema/Dockerfile to design.",
         "system_prompt": SOFTWARE_PROMPT,
         "tools": ["find_files", "list_dir", "read_text_file", "write_text_file",
-                  "make_folder", "web_search", "recall_fact", "remember_fact"],
+                  "make_folder", "web_search", "recall_fact", "remember_fact", "search_memory"],
     },
     "data": {
         "title": "Data",
@@ -99,7 +99,7 @@ DEPARTMENTS = {
         "when_to_use": "SQL to write/optimize, data analysis, document analysis, a report/chart spec, or an ETL/pipeline design.",
         "system_prompt": DATA_PROMPT,
         "tools": ["find_files", "list_dir", "read_text_file", "write_text_file",
-                  "web_search", "recall_fact", "remember_fact"],
+                  "web_search", "recall_fact", "remember_fact", "search_memory"],
     },
     "browser": {
         "title": "Browser",

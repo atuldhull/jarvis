@@ -78,7 +78,7 @@ KEYS_FILE = "keys.json"
 # browsing) can't drain the free-tier quota the others depend on. Routes are handed
 # to your Gemini keys in THIS order; with fewer keys than routes it wraps around
 # (round-robin), so every key still pulls weight. Add more keys → finer isolation.
-ROUTES = ["conversation", "planning", "research", "coding", "data", "browser", "system"]
+ROUTES = ["conversation", "planning", "research", "coding", "data", "browser", "system", "memory"]
 
 # Pin specific routes to specific Gemini keys (0-based index into your key list).
 # e.g. {"coding": 2} forces the coding route onto your 3rd Gemini key. Empty = auto.
@@ -156,6 +156,22 @@ BROWSER_PROFILE = "profile"
 # ─────────────────────────────────────────────────────────────────────────────
 MEMORY_DB = "jarvis.db"   # SQLite file for long-term facts (relative = portable)
 KEYRING_SERVICE = "jarvis"                         # namespace in Windows Credential Manager
+
+# ── Long-term memory (semantic recall + auto-capture) ────────────────────────
+# JARVIS remembers durable facts about you and recalls them by MEANING (not just
+# exact keys), pulling relevant ones into context each turn so it "remembers you".
+MEMORY_ENABLED = True
+# Local embedding model (Ollama) for semantic search. Pull once: `ollama pull nomic-embed-text`.
+# If it isn't available, memory falls back to keyword search — still works, just coarser.
+EMBED_MODEL = "nomic-embed-text"
+MEMORY_RECALL_K = 4         # how many relevant memories to surface per turn
+MEMORY_CAPTURE = True       # after a turn, extract durable facts in the background
+MEMORY_MIN_SIM = 0.35       # ignore recalled memories below this similarity (0–1)
+MEMORY_DEDUP_SIM = 0.90     # treat a new fact this similar to an existing one as a duplicate
+
+# Cap on an agent's running conversation history (messages), so a long session can't
+# overflow the model's context window. The persona + memory note are always kept.
+MAX_HISTORY_MESSAGES = 30
 
 
 # ─────────────────────────────────────────────────────────────────────────────

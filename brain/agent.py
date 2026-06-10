@@ -27,12 +27,39 @@ class Agent:
         # is kept for compatibility but does not select the brain.
         self.model = model
         self.tool_names = tools  # None = the full tool menu; a list = just those tools
+        self._ctx_idx = None  # index of the refreshable memory-context system message
         prompt = system_prompt or config.PERSONA
         self.messages = [{"role": "system", "content": prompt + "\n\n" + config.TOOL_GUIDANCE}]
+
+    def set_memory_context(self, text: str):
+        """Keep ONE refreshed memory note right after the persona (not in the chat log)."""
+        if not text:
+            return
+        note = {"role": "system", "content": text}
+        if self._ctx_idx is None:
+            self.messages.insert(1, note)
+            self._ctx_idx = 1
+        else:
+            self.messages[self._ctx_idx] = note
+
+    def _trim(self):
+        """Bound history so a long session can't overflow the context window and evict
+        the persona/memory note. Keeps the leading system messages + the most recent turns."""
+        cap = getattr(config, "MAX_HISTORY_MESSAGES", 30)
+        if len(self.messages) <= cap:
+            return
+        n_sys = 0
+        while n_sys < len(self.messages) and self.messages[n_sys]["role"] == "system":
+            n_sys += 1
+        tail = self.messages[n_sys:][-(cap - n_sys):]
+        while tail and tail[0]["role"] == "tool":  # never start the tail with an orphan tool result
+            tail = tail[1:]
+        self.messages = self.messages[:n_sys] + tail
 
     def run(self, user_text: str, max_steps: int = 6) -> str:
         """Handle one request, taking tool actions as needed; return the final reply."""
         self.messages.append({"role": "user", "content": user_text})
+        self._trim()
 
         for _ in range(max_steps):
             message = chat(
@@ -81,3 +108,4 @@ class Agent:
     def reset(self):
         """Forget the conversation, keep the persona + tool guidance."""
         self.messages = self.messages[:1]
+        self._ctx_idx = None
