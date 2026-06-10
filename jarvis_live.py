@@ -10,9 +10,18 @@ departments + task-based key routing + multilingual replies) and voice (Sarvam/P
 plugged in via voice/livekit_adapters.py — so you keep everything we built.
 """
 
+import os
 import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
+
+# Console mode runs the audio loop entirely LOCALLY (no server connection), but the
+# LiveKit worker still validates that credentials exist. These dummy values satisfy
+# that check for local use; set real LIVEKIT_* env vars only if you later want remote
+# (web/phone) access. The secret is 32+ chars to avoid a weak-key warning.
+os.environ.setdefault("LIVEKIT_URL", "ws://localhost:7880")
+os.environ.setdefault("LIVEKIT_API_KEY", "devkey")
+os.environ.setdefault("LIVEKIT_API_SECRET", "jarvis-local-console-only-not-a-real-secret")
 
 from livekit.agents import Agent, AgentSession, JobContext, WorkerOptions, cli
 from livekit.plugins import silero
