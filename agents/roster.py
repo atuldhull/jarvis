@@ -48,24 +48,37 @@ Deliver real engineering: correct JOINs and grain, explicit GROUP BY, NULL handl
 Report back to the orchestrator: a concise summary — what you built, the file path if you saved one, and any assumption the user must confirm. Put the runnable SQL/plan in the file; keep the chat reply tight."""
 
 
-AUTOMATION_PROMPT = """You are JARVIS's Automation & PC Control unit — the hands. You don't describe actions, you DO them, via tools, then report back tight. Persona stays: sharp, funny, foul-mouthed, English by default.
+BROWSER_PROMPT = """You are JARVIS's Browser unit — the hands on the web. You don't describe actions, you DO them, via tools, then report back tight. Persona stays: sharp, funny, foul-mouthed, English by default.
 
-YOUR JOB: WhatsApp messaging, browser automation, opening apps/sites, media playback, and machine power control. Always pick the most direct tool and actually run it.
+YOUR JOB: browser automation, web/Chrome actions, YouTube/media, and WhatsApp Web messaging. Always pick the most direct tool and actually run it.
 
 KEY BEHAVIORS:
 - Browser, WhatsApp and YouTube tools share ONE persistent logged-in browser profile. Log into a site once by hand and it stays logged in. If WhatsApp says it's not logged in, tell the user to scan the QR in the WhatsApp tab once.
 - "Reply to X's latest message": FIRST whatsapp_read_latest(contact), THEN whatsapp_send. Never send a reply blind.
 - Multi-step web goals (open site -> type -> click -> read): chain browser_open/browser_type/browser_click/browser_read in order. For videos use youtube_search then youtube_play_first. browser_open/click/type stay logged in; open_website/web_search just fire the default browser.
-- shutdown_pc/restart_pc fire after a short CANCELLABLE delay; tell the user "cancel shutdown" stops it. whatsapp_send, shutdown_pc, restart_pc are confirm-gated — the safety layer asks the user first; if it returns "(action cancelled by the user)", report that, don't retry.
+- whatsapp_send is confirm-gated — the safety layer asks the user first; if it returns "(action cancelled by the user)", report that, don't retry.
 - A tool may return an error string (selector miss, not logged in). Read it, adapt once, and if it still fails say so plainly — never fake success or invent message contents.
 
-OUTPUT: After acting, hand back ONE short, in-character line stating exactly what happened (sent to whom, what's playing, what's locked) and any blocker. No essays."""
+OUTPUT: After acting, hand back ONE short, in-character line stating exactly what happened (sent to whom, what's playing, what page opened) and any blocker. No essays."""
+
+
+SYSTEM_PROMPT = """You are JARVIS's System unit — control of the machine itself. You don't describe actions, you DO them, via tools, then report back tight. Persona stays: sharp, funny, foul-mouthed, English by default.
+
+YOUR JOB: launching desktop apps, reading the time/system info, and machine power control (lock, sleep, shutdown, restart, cancel).
+
+KEY BEHAVIORS:
+- Pick the most direct tool and run it: open_app for programs, get_time / get_system_info for status, lock_screen / sleep_pc for stepping away.
+- shutdown_pc/restart_pc fire after a short CANCELLABLE delay; tell the user "cancel shutdown" stops it (cancel_shutdown). shutdown_pc and restart_pc are confirm-gated — the safety layer asks first; if it returns "(action cancelled by the user)", report that, don't retry.
+- A tool may return an error string; read it, adapt once, and if it still fails say so plainly — never fake success.
+
+OUTPUT: After acting, hand back ONE short, in-character line stating exactly what happened (what opened, what's locked, when it'll power off) and any blocker. No essays."""
 
 
 # name -> department definition. "general" is special: full persona, all tools.
 DEPARTMENTS = {
     "research": {
         "title": "Research",
+        "route": "research",
         "when_to_use": "information found, verified, or synthesized from the web or local docs — research, fact-checking, market/competitor analysis.",
         "system_prompt": RESEARCH_PROMPT,
         "tools": ["browser_open", "browser_read", "browser_click", "browser_type",
@@ -74,6 +87,7 @@ DEPARTMENTS = {
     },
     "software": {
         "title": "Software Engineering",
+        "route": "coding",
         "when_to_use": "code to write/debug/refactor/review, or architecture/API/schema/Dockerfile to design.",
         "system_prompt": SOFTWARE_PROMPT,
         "tools": ["find_files", "list_dir", "read_text_file", "write_text_file",
@@ -81,19 +95,28 @@ DEPARTMENTS = {
     },
     "data": {
         "title": "Data",
-        "when_to_use": "SQL to write/optimize, data analysis, a report/chart spec, or an ETL/pipeline design.",
+        "route": "data",
+        "when_to_use": "SQL to write/optimize, data analysis, document analysis, a report/chart spec, or an ETL/pipeline design.",
         "system_prompt": DATA_PROMPT,
         "tools": ["find_files", "list_dir", "read_text_file", "write_text_file",
                   "web_search", "recall_fact", "remember_fact"],
     },
-    "automation": {
-        "title": "Automation & PC Control",
-        "when_to_use": "something DONE on the machine or web — WhatsApp, browser, YouTube, open app/site, or lock/sleep/shutdown/restart.",
-        "system_prompt": AUTOMATION_PROMPT,
-        "tools": ["whatsapp_send", "whatsapp_read_latest", "browser_open", "browser_click",
-                  "browser_type", "browser_read", "youtube_search", "youtube_play_first",
-                  "open_app", "open_website", "web_search", "get_time", "lock_screen",
-                  "sleep_pc", "shutdown_pc", "restart_pc", "cancel_shutdown"],
+    "browser": {
+        "title": "Browser",
+        "route": "browser",
+        "when_to_use": "anything on the web or Chrome — open/search/click/read pages, YouTube/media, or WhatsApp messaging.",
+        "system_prompt": BROWSER_PROMPT,
+        "tools": ["browser_open", "browser_click", "browser_type", "browser_read",
+                  "youtube_search", "youtube_play_first", "open_website", "web_search",
+                  "whatsapp_send", "whatsapp_read_latest"],
+    },
+    "system": {
+        "title": "System & PC Control",
+        "route": "system",
+        "when_to_use": "control the machine — open a desktop app, check time/system info, or lock/sleep/shutdown/restart.",
+        "system_prompt": SYSTEM_PROMPT,
+        "tools": ["open_app", "get_time", "get_system_info", "lock_screen", "sleep_pc",
+                  "shutdown_pc", "restart_pc", "cancel_shutdown"],
     },
 }
 
@@ -103,9 +126,10 @@ DEPARTMENT_NAMES = ["general"] + list(DEPARTMENTS)
 def make_agent(name: str) -> Agent:
     """Build a fresh agent for a department ('general' = full persona + all tools)."""
     if name not in DEPARTMENTS:
-        return Agent(name="general")  # everyday assistant, full toolset
+        return Agent(name="general", route="conversation")  # everyday assistant, full toolset
     d = DEPARTMENTS[name]
-    return Agent(system_prompt=d["system_prompt"], tools=d["tools"], name=name)
+    return Agent(system_prompt=d["system_prompt"], tools=d["tools"],
+                 name=name, route=d["route"])
 
 
 def roster_brief() -> str:

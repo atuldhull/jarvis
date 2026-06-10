@@ -54,12 +54,14 @@ the local brain today and upgrades to the fast cloud brains the moment you add k
 | **general** | everyday chat + simple single-tool requests | all tools |
 | **research** | web/browser investigation, fact-checking, market/competitor analysis | browser_*, web_search, find/read files, memory |
 | **software** | write/debug/refactor code, design architecture/APIs/schemas/Docker | file read/write, find, web_search, memory |
-| **data** | SQL, data analysis, report/chart specs, ETL design (output as text) | file read/write, find, web_search, memory |
-| **automation** | WhatsApp, browser automation, apps, media, PC power control | whatsapp_*, browser_*, youtube_*, open_app, power tools |
+| **data** | SQL, data/document analysis, report/chart specs, ETL design (output as text) | file read/write, find, web_search, memory |
+| **browser** | web/Chrome actions, YouTube/media, WhatsApp messaging | browser_*, youtube_*, whatsapp_*, web_search |
+| **system** | open desktop apps, time/system info, PC power control | open_app, get_time/info, lock/sleep/shutdown/restart |
 
-Each department is the same `Agent` class scoped to a **system prompt** + a **tool subset**
-— so the research agent literally cannot fire `shutdown_pc`, and the software agent only
-sees file/code tools. Defined in [agents/roster.py](../agents/roster.py).
+Each department is the same `Agent` class scoped to a **system prompt**, a **tool subset**, and
+a **task route** (its dedicated Gemini key) — so the research agent literally cannot fire
+`shutdown_pc`, and browsing draws from a different free-tier key than coding. Defined in
+[agents/roster.py](../agents/roster.py); see [task-based routing](MODEL_ROUTER.md#task-based-key-routing).
 
 Confirm-gated tools (`whatsapp_send`, `shutdown_pc`, `restart_pc`, `delete_file`) still ask
 before firing, even inside a delegated step.

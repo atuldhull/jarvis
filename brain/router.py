@@ -56,7 +56,7 @@ class ModelRouter:
                 if p != "local" and self.store.has(p)]
 
     # ── the one entry point ─────────────────────────────────────────────────────
-    def chat(self, messages, tools=None, options=None):
+    def chat(self, messages, tools=None, options=None, route=None):
         opts = dict(options or {})
         models = config.PROVIDER_MODELS
         offline_this_turn = False
@@ -89,9 +89,9 @@ class ModelRouter:
 
             # Try each key in turn until one works or they're all benched.
             for _ in range(len(self.store._keys.get(provider, []))):
-                key = self.store.pick(provider, now)
+                key = self.store.pick(provider, route=route, now=now)
                 if key is None:
-                    break  # every key for this provider is on cooldown
+                    break  # every key for this provider is on cooldown (or isolated)
                 try:
                     msg, latency, tokens = providers.call(
                         provider, model, messages, tools, opts, key.value)
@@ -153,6 +153,7 @@ class ModelRouter:
             "priority": config.PROVIDER_PRIORITY,
             "calls": dict(self.calls),
             "last_route": self.last_route,
+            "route_keys": dict(self.store.route_key),  # task route -> gemini key index
             "keys": self.store.snapshot(),
             "recent": list(self.route_log),
         }
@@ -169,6 +170,10 @@ def get_router():
     return _router
 
 
-def chat(messages, tools=None, options=None):
-    """Drop-in replacement for ollama_client.chat — routed across all brains."""
-    return get_router().chat(messages, tools=tools, options=options)
+def chat(messages, tools=None, options=None, route=None):
+    """Drop-in replacement for ollama_client.chat — routed across all brains.
+
+    `route` names the task category (conversation, coding, browser, …) so the router
+    can pick that category's dedicated Gemini key. None → the shared least-used pick.
+    """
+    return get_router().chat(messages, tools=tools, options=options, route=route)

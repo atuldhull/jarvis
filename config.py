@@ -73,6 +73,22 @@ COOLDOWN_OFFLINE = 30         # provider unreachable (no internet) → lean on l
 # OPENROUTER_KEY_1, … (numbered, as many as you have). See docs/MODEL_ROUTER.md.
 KEYS_FILE = "keys.json"
 
+# ── Task-based key routing ───────────────────────────────────────────────────
+# Each kind of task ("route") prefers its OWN Gemini key, so a busy category (say
+# browsing) can't drain the free-tier quota the others depend on. Routes are handed
+# to your Gemini keys in THIS order; with fewer keys than routes it wraps around
+# (round-robin), so every key still pulls weight. Add more keys → finer isolation.
+ROUTES = ["conversation", "planning", "research", "coding", "data", "browser", "system"]
+
+# Pin specific routes to specific Gemini keys (0-based index into your key list).
+# e.g. {"coding": 2} forces the coding route onto your 3rd Gemini key. Empty = auto.
+GEMINI_ROUTE_KEYS = {}
+
+# When a route's own Gemini key is exhausted, also try your OTHER Gemini keys before
+# dropping to Groq (squeezes the most out of the free tier). False = strict isolation
+# (assigned key → Groq → local), keeping each category's quota walled off.
+GEMINI_SPILL_TO_POOL = True
+
 # Print a one-line note (to stderr) when the router fails over between keys/providers,
 # so you can watch the load-balancing work. Set False to silence it.
 ROUTER_VERBOSE = True

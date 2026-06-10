@@ -30,6 +30,36 @@ force 100% local/private.
 
 ---
 
+## Task-based key routing
+
+Every Gemini free key has its own quota. If all tasks shared one pool, a heavy session
+(say lots of browsing) could burn the quota that coding or research needs. So each **task
+route** prefers its **own** Gemini key:
+
+| Route | Used by | 
+|---|---|
+| `conversation` | everyday chat (general agent) |
+| `planning` | the orchestrator's planning + aggregation (reasoning) |
+| `research` | the research agent |
+| `coding` | the software agent |
+| `data` | the data agent (incl. document analysis) |
+| `browser` | the browser agent (web/Chrome/YouTube/WhatsApp) |
+| `system` | the system agent (apps, power, system info) |
+
+Routes are handed to your Gemini keys in the order above (`config.ROUTES`). With **fewer keys
+than routes** it wraps around (round-robin), so every key still pulls weight; add more keys for
+finer isolation. Pin a route to a specific key with `GEMINI_ROUTE_KEYS` (e.g. `{"coding": 2}`).
+
+**Per-route fallback chain:** assigned Gemini key → *(spill)* the rest of your Gemini keys →
+Groq → OpenRouter → local. The spill step (`GEMINI_SPILL_TO_POOL = True`) squeezes the most out
+of the free tier; set it `False` for strict isolation (assigned key → Groq → local), walling
+off each category's quota. Parallel same-route steps share the route's key (gemini handles
+concurrency); when it's exhausted they spill/fail over automatically.
+
+With **zero keys** this whole layer is inert — everything routes to local, as before.
+
+---
+
 ## Get your FREE keys (₹0)
 
 All three have genuinely free tiers. Grab one or several from each — **more keys = more

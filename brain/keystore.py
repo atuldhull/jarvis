@@ -66,9 +66,23 @@ class KeyState:
 
 class KeyStore:
     def __init__(self):
-        self._keys = {}  # provider -> [KeyState]
+        self._keys = {}      # provider -> [KeyState]
+        self.route_key = {}  # route name -> index into the gemini key list
         self._lock = threading.Lock()  # parallel orchestrator steps share one pool
         self._load()
+        self._assign_routes()
+
+    def _assign_routes(self):
+        """Give each task route a preferred Gemini key (round-robin if keys < routes)."""
+        gem = self._keys.get("gemini", [])
+        if not gem:
+            return
+        routes = getattr(config, "ROUTES", [])
+        explicit = getattr(config, "GEMINI_ROUTE_KEYS", {}) or {}
+        n = len(gem)
+        for i, route in enumerate(routes):
+            idx = explicit.get(route, i % n)
+            self.route_key[route] = idx % n  # stay in range even if pinned too high
 
     def _load(self):
         data = {}
@@ -112,18 +126,29 @@ class KeyStore:
     def providers_with_keys(self):
         return [p for p, keys in self._keys.items() if keys]
 
-    def pick(self, provider, now=None):
-        """Reserve and return the least-used healthy key, or None if all are benched.
+    def pick(self, provider, route=None, now=None):
+        """Reserve and return a healthy key, or None if all are benched.
 
-        Counts in-flight reservations so that two threads picking at the same moment
-        fan out to different keys instead of stampeding one (the load-balancer is
-        otherwise read-then-write across a blocking network call).
+        For Gemini with a route, the route's ASSIGNED key gets first dibs (task-based
+        isolation). If that key is benched, we either spill to the rest of the Gemini
+        pool (config.GEMINI_SPILL_TO_POOL, default) or return None so the router drops
+        to the next provider. Otherwise we pick the least-used healthy key — counting
+        in-flight reservations so concurrent picks fan out instead of stampeding one.
         """
         now = now or time.time()
         with self._lock:
-            healthy = [k for k in self._keys.get(provider, []) if k.healthy(now)]
+            keys = self._keys.get(provider, [])
+            healthy = [k for k in keys if k.healthy(now)]
             if not healthy:
                 return None
+            # Task-based affinity: a route prefers its own Gemini key.
+            if provider == "gemini" and route in self.route_key:
+                assigned = keys[self.route_key[route]]
+                if assigned.healthy(now):
+                    assigned.inflight += 1
+                    return assigned
+                if not getattr(config, "GEMINI_SPILL_TO_POOL", True):
+                    return None  # strict isolation: assigned key down → next provider
             # Fewest (done + in-flight) first; oldest last_used breaks ties → round-robin.
             healthy.sort(key=lambda k: (k.requests + k.inflight, k.last_used))
             chosen = healthy[0]

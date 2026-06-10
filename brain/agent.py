@@ -20,8 +20,9 @@ from tools import schemas, dispatch, needs_confirm
 
 class Agent:
     def __init__(self, model: str = config.MODEL, system_prompt: str = None,
-                 tools: list = None, name: str = "general"):
+                 tools: list = None, name: str = "general", route: str = "conversation"):
         self.name = name
+        self.route = route  # task category → its dedicated Gemini key in the router
         # The router picks the model per call (from config.PROVIDER_MODELS); `model`
         # is kept for compatibility but does not select the brain.
         self.model = model
@@ -38,6 +39,7 @@ class Agent:
                 self.messages,
                 tools=schemas(only=self.tool_names),  # only this department's tools
                 options={"temperature": config.TEMPERATURE},
+                route=self.route,  # this department's dedicated Gemini key
             )
             self.messages.append(message)  # remember what the model said/decided
 

@@ -29,7 +29,8 @@ Departments (use these EXACT agent names, lowercase):
 - research   -> web/browser investigation, gather + summarize info.
 - software   -> read/write files and WRITE CODE (outputs code as TEXT; can save to a file).
 - data       -> analyze files/CSV/JSON and produce SQL or analysis (outputs SQL/analysis as TEXT).
-- automation -> DO things on the PC: open apps/sites, browser, youtube, whatsapp, lock/sleep/shutdown/restart.
+- browser    -> web/Chrome actions: open/click/type/read pages, youtube, whatsapp messaging.
+- system     -> control the machine: open desktop apps, time/system info, lock/sleep/shutdown/restart.
 - general    -> everyday answers, glue, simple tool use when no specialist fits.
 
 HARD RULES:
@@ -120,6 +121,7 @@ class Orchestrator:
                 [{"role": "system", "content": PLAN_PROMPT + nudge},
                  {"role": "user", "content": user_text}],
                 options={"temperature": 0.1},
+                route="planning",  # reasoning/planning gets its own Gemini key
             )
             try:
                 steps = self._parse_plan(msg.get("content") or "")
@@ -203,6 +205,7 @@ class Orchestrator:
              {"role": "user",
               "content": f"User's original request:\n{user_text}\n\nResults from each step:\n{block}\n\nWrite the final reply."}],
             options={"temperature": config.TEMPERATURE},
+            route="planning",  # reasoning/synthesis gets its own Gemini key
         )
         return (msg.get("content") or "").strip()
 
