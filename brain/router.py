@@ -16,6 +16,7 @@ message (see providers.py) regardless of who answered.
 
 import collections
 import sys
+import threading
 import time
 
 import config
@@ -30,12 +31,19 @@ class ModelRouter:
         self.calls = collections.Counter()                # provider -> successful calls
         self.route_log = collections.deque(maxlen=50)     # recent decisions, for the dashboard
         self.last_route = ""
+        self._lock = threading.Lock()                     # guards the bookkeeping above
 
     # ── helpers ───────────────────────────────────────────────────────────────
     def _log(self, line):
-        self.route_log.append(line)
+        with self._lock:
+            self.route_log.append(line)
         if getattr(config, "ROUTER_VERBOSE", True):
             print(f"[router] {line}", file=sys.stderr)
+
+    def _record_call(self, route):
+        with self._lock:
+            self.calls[route] += 1
+            self.last_route = route
 
     def _provider_ready(self, provider, now):
         return now >= self.provider_cooldown.get(provider, 0)
@@ -52,18 +60,16 @@ class ModelRouter:
         opts = dict(options or {})
         models = config.PROVIDER_MODELS
         offline_this_turn = False
+        tried_local = False
         last_err = None
 
         for provider in config.PROVIDER_PRIORITY:
             now = time.time()
 
             if provider == "local":
+                tried_local = True
                 try:
-                    msg, latency, _ = providers.call(
-                        "local", models.get("local", config.MODEL), messages, tools, opts, None)
-                    self.calls["local"] += 1
-                    self.last_route = "local"
-                    return msg
+                    return self._call_local(models, messages, tools, opts)
                 except Exception as e:                    # Ollama itself is down → out of options
                     last_err = e
                     self._log(f"local failed: {e}")
@@ -76,6 +82,10 @@ class ModelRouter:
                 continue
             if not self.store.has(provider):
                 continue
+            model = models.get(provider)
+            if not model:  # provider has keys but no model configured → skip, keep local safe
+                self._log(f"{provider} has no model configured → skipping")
+                continue
 
             # Try each key in turn until one works or they're all benched.
             for _ in range(len(self.store._keys.get(provider, []))):
@@ -84,42 +94,57 @@ class ModelRouter:
                     break  # every key for this provider is on cooldown
                 try:
                     msg, latency, tokens = providers.call(
-                        provider, models[provider], messages, tools, opts, key.value)
-                    key.record_success(latency, tokens)
-                    self.calls[provider] += 1
-                    self.last_route = key.label
-                    if self.last_route != "local":
-                        self._log(f"served by {key.label} ({round(latency)}ms)")
+                        provider, model, messages, tools, opts, key.value)
+                    self.store.note_success(key, latency, tokens)
+                    self._record_call(key.label)
+                    self._log(f"served by {key.label} ({round(latency)}ms)")
                     return msg
                 except providers.Offline as e:
                     # No internet → no cloud will work this turn. Drop to local.
-                    self.provider_cooldown[provider] = now + config.COOLDOWN_OFFLINE
+                    self.store.release(key)
+                    with self._lock:
+                        self.provider_cooldown[provider] = now + config.COOLDOWN_OFFLINE
                     offline_this_turn = True
                     last_err = e
                     self._log(f"{provider} unreachable (offline) → falling back to local")
                     break
                 except providers.AuthError as e:
-                    key.bench(config.COOLDOWN_AUTH, "auth")
+                    self.store.note_failure(key, config.COOLDOWN_AUTH, "auth")
                     last_err = e
                     self._log(f"{key.label} bad key → benched, trying next")
                 except providers.QuotaExceeded as e:
-                    key.bench(config.COOLDOWN_QUOTA, "quota")
+                    self.store.note_failure(key, config.COOLDOWN_QUOTA, "quota")
                     last_err = e
                     self._log(f"{key.label} quota exhausted → benched, trying next")
                 except providers.RateLimited as e:
-                    key.bench(config.COOLDOWN_RATE_LIMIT, "rate-limit")
+                    self.store.note_failure(key, config.COOLDOWN_RATE_LIMIT, "rate-limit")
                     last_err = e
                     self._log(f"{key.label} rate-limited → benched, trying next")
                 except providers.Transient as e:
-                    key.bench(15, "transient")
+                    self.store.note_failure(key, 15, "transient")
                     last_err = e
                     self._log(f"{key.label} transient error → benched, trying next")
                 except providers.ProviderError as e:
-                    key.bench(60, "error")
+                    self.store.note_failure(key, 60, "error")
                     last_err = e
                     self._log(f"{key.label} error: {str(e)[:80]} → benched, trying next")
 
+        # Enforced safety net: always try local once, even if it isn't in the
+        # priority list — local is the guarantee that the user never sees an outage.
+        if not tried_local:
+            try:
+                return self._call_local(models, messages, tools, opts)
+            except Exception as e:
+                last_err = e
+                self._log(f"local fallback failed: {e}")
+
         raise RuntimeError(f"All brains failed. Last error: {last_err}")
+
+    def _call_local(self, models, messages, tools, opts):
+        msg, _latency, _ = providers.call(
+            "local", models.get("local", config.MODEL), messages, tools, opts, None)
+        self._record_call("local")
+        return msg
 
     # ── for the dashboard / debugging ───────────────────────────────────────────
     def stats(self):

@@ -34,9 +34,16 @@ def tool(name, description, parameters=None, confirm=False):
     return wrap
 
 
-def schemas():
-    """The list of tool definitions to hand the model."""
-    return [t["schema"] for t in _TOOLS.values()]
+def schemas(only=None):
+    """The tool definitions to hand the model.
+
+    Pass `only=[names]` to expose just a subset — that's how each specialist agent
+    is given only the tools for its department. `only=None` returns the full menu.
+    """
+    if only is None:
+        return [t["schema"] for t in _TOOLS.values()]
+    allowed = set(only)
+    return [t["schema"] for name, t in _TOOLS.items() if name in allowed]
 
 
 def needs_confirm(name):

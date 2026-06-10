@@ -13,6 +13,7 @@ touch the source tree.
 
 import json
 import os
+import threading
 import time
 
 import config
@@ -33,6 +34,7 @@ class KeyState:
         self.last_used = 0.0
         self.cooldown_until = 0.0   # benched until this wall-clock time
         self.reason = ""            # why it was last benched
+        self.inflight = 0           # calls picked but not yet finished (parallel-safe balancing)
 
     @property
     def label(self):
@@ -43,12 +45,14 @@ class KeyState:
 
     def bench(self, seconds, reason):
         """Take this key out of rotation for a while."""
+        self.inflight = max(0, self.inflight - 1)
         self.cooldown_until = time.time() + seconds
         self.reason = reason
         self.errors += 1
         self.total_errors += 1
 
     def record_success(self, latency_ms, tokens=0):
+        self.inflight = max(0, self.inflight - 1)
         self.requests += 1
         self.tokens += tokens
         self.errors = 0
@@ -63,6 +67,7 @@ class KeyState:
 class KeyStore:
     def __init__(self):
         self._keys = {}  # provider -> [KeyState]
+        self._lock = threading.Lock()  # parallel orchestrator steps share one pool
         self._load()
 
     def _load(self):
@@ -108,14 +113,35 @@ class KeyStore:
         return [p for p, keys in self._keys.items() if keys]
 
     def pick(self, provider, now=None):
-        """The least-used healthy key for a provider, or None if all are benched."""
+        """Reserve and return the least-used healthy key, or None if all are benched.
+
+        Counts in-flight reservations so that two threads picking at the same moment
+        fan out to different keys instead of stampeding one (the load-balancer is
+        otherwise read-then-write across a blocking network call).
+        """
         now = now or time.time()
-        healthy = [k for k in self._keys.get(provider, []) if k.healthy(now)]
-        if not healthy:
-            return None
-        # Least-used first (fewest requests), oldest last_used breaks ties → round-robin.
-        healthy.sort(key=lambda k: (k.requests, k.last_used))
-        return healthy[0]
+        with self._lock:
+            healthy = [k for k in self._keys.get(provider, []) if k.healthy(now)]
+            if not healthy:
+                return None
+            # Fewest (done + in-flight) first; oldest last_used breaks ties → round-robin.
+            healthy.sort(key=lambda k: (k.requests + k.inflight, k.last_used))
+            chosen = healthy[0]
+            chosen.inflight += 1
+            return chosen
+
+    def note_success(self, key, latency_ms, tokens=0):
+        with self._lock:
+            key.record_success(latency_ms, tokens)
+
+    def note_failure(self, key, seconds, reason):
+        with self._lock:
+            key.bench(seconds, reason)
+
+    def release(self, key):
+        """Drop a reservation without penalty (e.g. provider was simply offline)."""
+        with self._lock:
+            key.inflight = max(0, key.inflight - 1)
 
     def snapshot(self):
         """A plain-dict view of pool health for the dashboard / debugging."""

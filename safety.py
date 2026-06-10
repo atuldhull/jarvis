@@ -9,7 +9,16 @@ action can't quietly do damage.
 """
 
 
-def confirm(action_name, args) -> bool:
-    print(f"\n⚠️  Sensitive action requested: {action_name}({args})")
-    answer = input("    Allow it? type 'yes' to proceed > ").strip().lower()
+import threading
+
+# When the orchestrator runs steps in parallel, two confirm prompts could otherwise
+# interleave on the same terminal. This lock makes confirmations strictly one-at-a-time.
+_prompt_lock = threading.Lock()
+
+
+def confirm(action_name, args, who="") -> bool:
+    label = f" [{who}]" if who else ""  # which agent/department is asking
+    with _prompt_lock:
+        print(f"\n⚠️  Sensitive action requested{label}: {action_name}({args})")
+        answer = input("    Allow it? type 'yes' to proceed > ").strip().lower()
     return answer in {"yes", "y"}

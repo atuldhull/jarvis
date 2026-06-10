@@ -37,6 +37,10 @@ THINK = False
 # between commands). "30m" = stay warm for 30 minutes; "-1" = until you quit Ollama.
 KEEP_ALIVE = "30m"
 
+# Seconds to wait on a single local Ollama generation before giving up (per attempt).
+# 120s is plenty for a 6 GB model; lower it if you'd rather fail fast.
+OLLAMA_TIMEOUT = 120
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # THE MODEL ROUTER (hybrid brains: free cloud when online, local when not)
@@ -72,6 +76,23 @@ KEYS_FILE = "keys.json"
 # Print a one-line note (to stderr) when the router fails over between keys/providers,
 # so you can watch the load-balancing work. Set False to silence it.
 ROUTER_VERBOSE = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE ORCHESTRATOR (multi-agent "JARVIS OS")
+# ─────────────────────────────────────────────────────────────────────────────
+# A CEO that routes complex requests to specialized departments (research, software,
+# data, automation) and runs independent steps in parallel. Everyday messages skip
+# all of that and go straight to the general assistant, so simple stuff stays fast.
+ORCHESTRATOR_ENABLED = True
+
+# How many department steps may run at once. Cloud keys parallelize well; the local
+# 6 GB model serializes, so keep this small (2–4). 3 is a good default.
+ORCH_MAX_WORKERS = 3
+
+# Print a line (to stderr) when the orchestrator plans / runs steps, so you can see
+# the org working. Set False to silence it.
+ORCHESTRATOR_VERBOSE = True
 
 
 # ─────────────────────────────────────────────────────────────────────────────

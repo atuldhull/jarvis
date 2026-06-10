@@ -18,6 +18,8 @@ Adapters raise TYPED errors so the router knows how to react:
 """
 
 import json
+import socket
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -25,6 +27,11 @@ import uuid
 
 import config
 from brain import ollama_client
+
+# Local Ollama holds one model on a 6 GB GPU and serializes generations anyway, so
+# we let only one local call run at a time — parallel orchestrator steps queue here
+# instead of stacking generations and thrashing VRAM.
+_LOCAL_LOCK = threading.Lock()
 
 
 # ── Typed errors ──────────────────────────────────────────────────────────────
@@ -65,6 +72,19 @@ def _loads(s):
         return {}
 
 
+def _norm_toolcalls(tcs):
+    """Coerce a provider's tool_calls into the canonical shape, tolerating gaps."""
+    out = []
+    for tc in tcs or []:
+        fn = tc.get("function") or {}
+        out.append({
+            "id": tc.get("id") or _id(),
+            "type": "function",
+            "function": {"name": fn.get("name", ""), "arguments": fn.get("arguments") or "{}"},
+        })
+    return out
+
+
 # ── Raw HTTP with error classification ────────────────────────────────────────
 def _post(url, headers, body, timeout=90):
     data = json.dumps(body).encode("utf-8")
@@ -80,19 +100,34 @@ def _post(url, headers, body, timeout=90):
         except Exception:
             detail = str(e.reason)
         low = detail.lower()
-        if e.code in (401, 403) or "api_key_invalid" in low or "api key not valid" in low:
+        key_marker = ("api_key_invalid" in low or "api key not valid" in low
+                      or "invalid api key" in low or "unauthenticated" in low)
+        if e.code == 401 or key_marker:
             raise AuthError(detail)
+        if e.code == 403:
+            # 403 can be a bad key OR a region/billing/project block. Don't park a
+            # healthy key for a whole day over the latter — rest it like a quota issue.
+            if "api key" in low or "api_key" in low or "permission" in low and "key" in low:
+                raise AuthError(detail)
+            raise QuotaExceeded(detail)
         if e.code == 429:
             if "quota" in low or "daily" in low or "exhaust" in low or "resource_exhausted" in low:
                 raise QuotaExceeded(detail)
             raise RateLimited(detail)
+        if e.code == 400:
+            # Malformed request (bad tool/message shape) is OUR bug, not the key's —
+            # treat as transient so we don't bench an otherwise-good key for a day.
+            raise Transient(f"400: {detail[:200]}")
         if e.code >= 500:
             raise Transient(f"{e.code}: {detail[:200]}")
         raise ProviderError(f"{e.code}: {detail[:200]}")
     except urllib.error.URLError as e:
-        # DNS failure / connection refused / no internet.
-        raise Offline(str(e.reason))
-    except TimeoutError:
+        # A connect-phase timeout arrives wrapped here — treat it as transient, not
+        # "offline", so we don't bench the whole provider for being merely slow.
+        if isinstance(e.reason, (TimeoutError, socket.timeout)):
+            raise Transient("connect timeout")
+        raise Offline(str(e.reason))  # DNS failure / connection refused / no internet
+    except (TimeoutError, socket.timeout):
         raise Transient("timeout")
 
 
@@ -134,11 +169,14 @@ def _openai_compat(provider, model, messages, tools, opts, key):
         body["tools"] = tools
         body["tool_choice"] = "auto"
     payload, latency = _post(_OPENAI_ENDPOINTS[provider], headers, body)
-    choice = payload["choices"][0]["message"]
+    choices = payload.get("choices") or []
+    if not choices:  # a 200 with an empty/odd body → fail over, don't crash
+        raise Transient("no choices in response: " + json.dumps(payload)[:200])
+    choice = choices[0].get("message") or {}
     msg = {
         "role": "assistant",
         "content": choice.get("content") or "",
-        "tool_calls": choice.get("tool_calls") or [],
+        "tool_calls": _norm_toolcalls(choice.get("tool_calls")),
     }
     tokens = (payload.get("usage") or {}).get("total_tokens", 0)
     return msg, latency, tokens
@@ -161,8 +199,9 @@ def _gemini(model, messages, tools, opts, key):
             if m.get("content"):
                 parts.append({"text": m["content"]})
             for tc in m.get("tool_calls", []):
-                fn = tc["function"]
-                parts.append({"functionCall": {"name": fn["name"], "args": _loads(fn["arguments"])}})
+                fn = tc.get("function") or {}
+                parts.append({"functionCall": {"name": fn.get("name", ""),
+                                               "args": _loads(fn.get("arguments"))}})
             contents.append({"role": "model", "parts": parts or [{"text": ""}]})
         elif role == "tool":
             contents.append({"role": "user", "parts": [{
@@ -212,8 +251,8 @@ def _to_ollama_messages(messages):
             a = {"role": "assistant", "content": m.get("content") or ""}
             if m.get("tool_calls"):
                 a["tool_calls"] = [{"function": {
-                    "name": tc["function"]["name"],
-                    "arguments": _loads(tc["function"]["arguments"]),
+                    "name": (tc.get("function") or {}).get("name", ""),
+                    "arguments": _loads((tc.get("function") or {}).get("arguments")),
                 }} for tc in m["tool_calls"]]
             out.append(a)
         elif role == "tool":
@@ -226,7 +265,8 @@ def _to_ollama_messages(messages):
 
 def _ollama(model, messages, tools, opts, key=None):
     start = time.time()
-    raw = ollama_client.chat(model, _to_ollama_messages(messages), tools=tools, options=opts)
+    with _LOCAL_LOCK:  # one local generation at a time (single 6 GB GPU)
+        raw = ollama_client.chat(model, _to_ollama_messages(messages), tools=tools, options=opts)
     latency = (time.time() - start) * 1000
     tool_calls = []
     for tc in raw.get("tool_calls") or []:

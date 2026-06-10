@@ -48,9 +48,10 @@ def chat(model, messages, tools=None, options=None, attempts=2):
         data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json"},
     )
+    timeout = getattr(config, "OLLAMA_TIMEOUT", 120)
     for attempt in range(attempts):
         try:
-            with urllib.request.urlopen(req, timeout=300) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return _clean(json.loads(resp.read())["message"])
         except urllib.error.HTTPError as e:
             # 5xx is usually a transient VRAM/model-load hiccup → wait and retry once.

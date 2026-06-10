@@ -75,6 +75,31 @@ def make_folder(path):
 
 
 @tool(
+    "write_text_file",
+    "Write (or overwrite) a UTF-8 text file — used to save code, notes, configs, reports. "
+    "Creates parent folders as needed.",
+    {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "Where to write, e.g. 'app/main.py'."},
+            "content": {"type": "string", "description": "The full text to write."},
+        },
+        "required": ["path", "content"],
+    },
+)
+def write_text_file(path, content):
+    try:
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"Wrote {len(content)} chars to {path}."
+    except Exception as e:
+        return f"Couldn't write {path}: {e}"
+
+
+@tool(
     "delete_file",
     "Delete a file. This is irreversible, so it asks for confirmation first.",
     {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},

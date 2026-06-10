@@ -1,9 +1,13 @@
 """The agent loop: plan → act → observe → repeat.
 
-Where Brain.think() just chats, the Agent hands the model a menu of tools. If the
-model decides to call one, we run it, feed the result back, and let the model
-continue — looping until it produces a normal reply for the user. This loop is the
-heart of "JARVIS that *does* things."
+One `Agent` runs the loop: it hands the model a menu of tools, and if the model
+calls one, we run it, feed the result back, and let the model continue — until it
+produces a normal reply. This is the heart of "JARVIS that *does* things."
+
+The same class powers both the everyday assistant AND each specialist "department"
+in the orchestrator: pass a custom `system_prompt` and a `tools` subset to scope an
+agent to one job (research, coding, …). With no arguments it's the general
+assistant with the full toolset, exactly as before.
 """
 
 import json
@@ -15,20 +19,24 @@ from tools import schemas, dispatch, needs_confirm
 
 
 class Agent:
-    def __init__(self, model: str = config.MODEL):
+    def __init__(self, model: str = config.MODEL, system_prompt: str = None,
+                 tools: list = None, name: str = "general"):
+        self.name = name
+        # The router picks the model per call (from config.PROVIDER_MODELS); `model`
+        # is kept for compatibility but does not select the brain.
         self.model = model
-        self.messages = [
-            {"role": "system", "content": config.PERSONA + "\n\n" + config.TOOL_GUIDANCE}
-        ]
+        self.tool_names = tools  # None = the full tool menu; a list = just those tools
+        prompt = system_prompt or config.PERSONA
+        self.messages = [{"role": "system", "content": prompt + "\n\n" + config.TOOL_GUIDANCE}]
 
     def run(self, user_text: str, max_steps: int = 6) -> str:
-        """Handle one user request, taking tool actions as needed."""
+        """Handle one request, taking tool actions as needed; return the final reply."""
         self.messages.append({"role": "user", "content": user_text})
 
         for _ in range(max_steps):
             message = chat(
                 self.messages,
-                tools=schemas(),
+                tools=schemas(only=self.tool_names),  # only this department's tools
                 options={"temperature": config.TEMPERATURE},
             )
             self.messages.append(message)  # remember what the model said/decided
@@ -46,7 +54,10 @@ class Agent:
                     args = json.loads(args or "{}")
                 args = dict(args)
 
-                if needs_confirm(name) and not safety.confirm(name, args):
+                if self.tool_names is not None and name not in self.tool_names:
+                    # The model reached for a tool outside this department's scope.
+                    result = f"({name} isn't available to the {self.name} department)"
+                elif needs_confirm(name) and not safety.confirm(name, args, self.name):
                     result = "(action cancelled by the user)"
                 else:
                     try:
