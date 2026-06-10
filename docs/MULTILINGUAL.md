@@ -53,9 +53,9 @@ Kannada needs Sarvam). Set `SARVAM_ENABLED = False` in `config.py` to force loca
 
 - ✅ **Reply-language switching** — verified live (Kannada / Hindi / English, persona kept).
 - ✅ **Graceful fallback** — no key → local faster-whisper + Piper; never breaks the voice loop.
-- ⏳ **Sarvam STT/TTS API** — built to Sarvam's documented shapes but **needs your key + a mic
-  to verify live**. If a model/speaker name is off, it simply fails over to local — fix the name
-  in `config.py` and it lights up. (Same pattern as the model router.)
+- ✅ **Sarvam STT/TTS** — verified live: Hindi round-trip (synthesize → transcribe) works,
+  language auto-detected. Models: TTS `bulbul:v2`, STT `saarika:v2.5`. Fixes the local
+  Whisper-base bug where Hindi/Kannada came out as Arabic.
 
 Voice mode (`py voice_main.py`) now runs on the **full orchestrator** — so voice gets memory,
 the specialist departments, and multilingual replies, not just a bare chat loop.

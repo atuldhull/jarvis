@@ -204,7 +204,7 @@ PIPER_MODEL_HI = "voices/hi_IN-pratham-medium.onnx"  # Indian voice for Hindi re
 # Get a key at https://dashboard.sarvam.ai → put it in keys.json ("sarvam": ["..."])
 # or env SARVAM_KEY. Set SARVAM_ENABLED = False to force the local voice stack.
 SARVAM_ENABLED = True
-SARVAM_STT_MODEL = "saarika:v2"      # Sarvam ASR (auto-detects the spoken language)
+SARVAM_STT_MODEL = "saarika:v2.5"    # Sarvam ASR (auto-detects the spoken language)
 SARVAM_TTS_MODEL = "bulbul:v2"       # Sarvam TTS
 SARVAM_TTS_SPEAKER = "anushka"       # a Bulbul voice — swap freely (see Sarvam docs)
 # Languages JARVIS will understand/speak. Detected language drives the reply + voice.
