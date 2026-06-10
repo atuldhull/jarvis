@@ -33,6 +33,10 @@ from brain import ollama_client
 # instead of stacking generations and thrashing VRAM.
 _LOCAL_LOCK = threading.Lock()
 
+# urllib's default User-Agent ("Python-urllib/3.x") gets blocked by Cloudflare in
+# front of some providers (Groq returns 403 error 1010). A browser-like UA fixes it.
+_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) JARVIS/1.0"
+
 
 # ── Typed errors ──────────────────────────────────────────────────────────────
 class ProviderError(Exception):
@@ -88,6 +92,7 @@ def _norm_toolcalls(tcs):
 # ── Raw HTTP with error classification ────────────────────────────────────────
 def _post(url, headers, body, timeout=90):
     data = json.dumps(body).encode("utf-8")
+    headers = {**headers, "User-Agent": _UA}  # avoid Cloudflare bot blocks (Groq 403/1010)
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     start = time.time()
     try:

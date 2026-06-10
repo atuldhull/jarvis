@@ -57,8 +57,8 @@ PROVIDER_PRIORITY = ["gemini", "groq", "openrouter", "local"]
 
 # Which model to use on each provider — all free-tier picks; swap freely.
 PROVIDER_MODELS = {
-    "gemini": "gemini-2.0-flash",
-    "groq": "llama-3.3-70b-versatile",
+    "gemini": "gemini-2.5-flash",   # 2.0-flash has no free tier now; 2.5-flash is the free pick
+    "groq": "llama-3.3-70b-versatile",          # verified working on the free tier
     "openrouter": "meta-llama/llama-3.3-70b-instruct:free",
     "local": MODEL,  # your Ollama model (set above)
 }
