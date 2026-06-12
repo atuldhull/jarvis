@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS-ORB</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<!-- A single centered orb: reactor in the middle, control buttons ringed around it.
+     Floats over your normal desktop; nothing is embedded, nothing is taken over. -->
+<body class="orb-body">
+  <div class="orb">
+    <canvas id="reactor"></canvas>
+
+    <!-- the ring of buttons (positions are computed in orb.js) -->
+    <div class="ring" id="ring">
+      <button class="ob" data-act="voice"    title="Voice mode">&#127908;</button>
+      <button class="ob" data-act="ask"       title="Type a command">&#128172;</button>
+      <button class="ob" data-act="youtube"   title="YouTube">&#9654;</button>
+      <button class="ob" data-act="whatsapp"  title="WhatsApp"><span class="wa">WA</span></button>
+      <button class="ob" data-act="lock"      title="Lock PC">&#128274;</button>
+      <button class="ob saver" data-act="saver" title="Battery saver (pause)">&#128267;</button>
+      <button class="ob off"   data-act="off"   title="Switch JARVIS off">&#9211;</button>
+    </div>
+
+    <!-- the center: status, command box, reply bubble -->
+    <div class="orb-center">
+      <div id="bubble" class="orb-bubble hidden"><span id="bubble-text"></span></div>
+      <form id="ask-form" class="orb-ask hidden">
+        <input id="ask-input" type="text" autocomplete="off" spellcheck="false"
+               placeholder="command JARVIS…">
+      </form>
+      <div id="orb-status" class="orb-status">JARVIS</div>
+    </div>
+  </div>
+
+  <script src="orb.js"></script>
+</body>
+</html>

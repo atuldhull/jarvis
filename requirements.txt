@@ -25,6 +25,11 @@ piper-tts>=1.2               # optional nicer British voice (needs a voice-model
 livekit-agents>=1.0          # the real-time voice agent framework (console mode = local mic)
 livekit-plugins-silero       # local voice-activity detection (no key)
 
+# ── Phase 9 — the desktop UI (fullscreen dashboard, wallpaper, orb)
+pywebview>=6.0               # native window rendering the HTML/Canvas front-end (Edge WebView2)
+psutil>=5.9                  # live system stats for the dashboard (CPU/RAM/disk/battery)
+pillow>=10.0                # generates the holographic wallpaper + dashboard screenshots
+
 # ── Phase 7 (Windows desktop control) ────────────────────────────────────────
 # pywinauto>=0.6
 # comtypes>=1.4.8              # REQUIRED >=1.4.8 for pywinauto on Python 3.13

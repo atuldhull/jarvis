@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS-DOCK</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<!-- The DOCK: the clickable layer that floats OVER the wallpaper. Each button does a
+     different job; the wallpaper itself can't take clicks, so the controls live here. -->
+<body class="dock-body">
+  <!-- reply bubble (shown when JARVIS answers; the window grows to fit, then shrinks) -->
+  <div id="bubble" class="bubble hidden"><span id="bubble-text"></span></div>
+
+  <!-- the command box (hidden until you hit Ask) -->
+  <form id="ask-form" class="ask-form hidden">
+    <input id="ask-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="command JARVIS…">
+  </form>
+
+  <nav class="dock">
+    <button class="db" data-act="voice"    title="Voice mode">&#127908;</button>
+    <button class="db" data-act="ask"      title="Type a command">&#128172;</button>
+    <button class="db" data-act="youtube"  title="YouTube">&#9654;</button>
+    <button class="db" data-act="whatsapp" title="WhatsApp">&#128172;<span class="wa">WA</span></button>
+    <button class="db" data-act="lock"     title="Lock PC">&#128274;</button>
+    <span class="sep"></span>
+    <button class="db saver" data-act="saver" title="Battery saver (pause animation)">&#128267;</button>
+    <button class="db off"   data-act="off"   title="Switch JARVIS off">&#9211;</button>
+  </nav>
+
+  <script src="dock.js"></script>
+</body>
+</html>

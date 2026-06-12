@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS-WALLPAPER</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<!-- The WALLPAPER layer: pure visuals (reactor + telemetry). It lives BEHIND the
+     desktop icons, so it carries nothing clickable — the buttons live in the dock. -->
+<body class="state-idle wallpaper">
+  <canvas id="reactor"></canvas>
+  <div class="vignette"></div>
+  <div class="scanlines"></div>
+
+  <header class="hud-bar">
+    <span class="brand">J.A.R.V.I.S</span>
+    <span class="status"><i class="dot"></i><span id="status-text">STANDBY</span></span>
+    <span class="brain" id="clock">--:--</span>
+  </header>
+
+  <aside class="panel panel-tl">
+    <h2>SYSTEM</h2>
+    <div class="readout"><span>CORE</span><b>qwen2.5:7b</b></div>
+    <div class="readout"><span>ROUTER</span><b>hybrid</b></div>
+    <div class="readout"><span>UPTIME</span><b id="uptime">00:00</b></div>
+    <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </aside>
+
+  <aside class="panel panel-tr">
+    <h2>DEPARTMENTS</h2>
+    <ul class="depts">
+      <li data-d="research"><i></i>research</li>
+      <li data-d="software"><i></i>software</li>
+      <li data-d="data"><i></i>data</li>
+      <li data-d="browser"><i></i>browser</li>
+      <li data-d="system"><i></i>system</li>
+    </ul>
+  </aside>
+
+  <script src="wallpaper.js"></script>
+</body>
+</html>

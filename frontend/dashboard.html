@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>J.A.R.V.I.S.</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <!-- ── TOP BAR ─────────────────────────────────────────────────────────── -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo"><span></span><span></span><span></span></div>
+      <div><div class="bt">J.A.R.V.I.S.</div><div class="bv" id="version">v6.2.1</div></div>
+    </div>
+    <div class="status"><i class="dot"></i> SYSTEM STATUS <b>ONLINE</b></div>
+    <div class="clock"><div id="date">—</div><div class="time" id="time">--:--</div></div>
+    <div class="userbox"><div class="ulabel">USER</div><div class="uname" id="user">STARK</div></div>
+    <div class="ticons">
+      <button class="ti" title="Notifications">&#128276;</button>
+      <button class="ti" data-act="settings" title="Settings">&#9881;</button>
+      <button class="ti power" data-act="quit" title="Power">&#9211;</button>
+    </div>
+  </header>
+
+  <!-- ── LEFT NAV ────────────────────────────────────────────────────────── -->
+  <nav class="nav">
+    <button class="navitem active" data-act="home"><span class="ic">&#9750;</span><span class="nl"><b>DASHBOARD</b><i>System Overview</i></span></button>
+    <button class="navitem" data-act="voice"><span class="ic">&#127911;</span><span class="nl"><b>AI ASSISTANT</b><i>Talk to J.A.R.V.I.S.</i></span></button>
+    <button class="navitem" data-act="web"><span class="ic">&#127760;</span><span class="nl"><b>WEB BROWSER</b><i>Browse the Internet</i></span></button>
+    <button class="navitem" data-act="files"><span class="ic">&#128193;</span><span class="nl"><b>FILE MANAGER</b><i>Access Your Files</i></span></button>
+    <button class="navitem" data-act="media"><span class="ic">&#9835;</span><span class="nl"><b>MEDIA CENTER</b><i>Music, Videos &amp; More</i></span></button>
+    <button class="navitem" data-act="tools"><span class="ic">&#128295;</span><span class="nl"><b>SYSTEM TOOLS</b><i>Optimize &amp; Maintain</i></span></button>
+    <button class="navitem" data-act="security"><span class="ic">&#128737;</span><span class="nl"><b>SECURITY CENTER</b><i>System Protection</i></span></button>
+    <button class="navitem" data-act="settings"><span class="ic">&#9881;</span><span class="nl"><b>SETTINGS</b><i>Preferences &amp; Config</i></span></button>
+    <button class="navitem" data-act="notes"><span class="ic">&#128221;</span><span class="nl"><b>NOTES</b><i>Quick Notes</i></span></button>
+  </nav>
+
+  <!-- ── CENTER ──────────────────────────────────────────────────────────── -->
+  <main class="center">
+    <section class="hero">
+      <div class="portrait" id="portrait"><div class="silhouette"></div></div>
+      <div class="scan"></div>
+
+      <div class="card diag">
+        <h3>SYSTEM DIAGNOSTICS</h3>
+        <div class="drow"><span>CPU</span><b id="d-cpu">0%</b><canvas class="spark" id="sp-cpu" width="80" height="22"></canvas></div>
+        <div class="drow"><span>RAM</span><b id="d-ram">0%</b><canvas class="spark" id="sp-ram" width="80" height="22"></canvas></div>
+        <div class="drow"><span>DISK</span><b id="d-disk">0%</b><canvas class="spark" id="sp-disk" width="80" height="22"></canvas></div>
+        <div class="drow"><span>NET</span><b id="d-net">0</b><canvas class="spark" id="sp-net" width="80" height="22"></canvas></div>
+      </div>
+
+      <div class="card caps">
+        <h3>AI CAPABILITIES</h3>
+        <div class="cap"><span>NATURAL LANGUAGE</span><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="cap"><span>MACHINE LEARNING</span><div class="bar"><i style="width:100%"></i></div></div>
+        <div class="cap"><span>DATA ANALYSIS</span><div class="bar"><i style="width:98%"></i></div></div>
+        <div class="cap"><span>AUTOMATION</span><div class="bar"><i style="width:100%"></i></div></div>
+      </div>
+
+      <div class="card voice">
+        <h3>VOICE RECOGNITION</h3>
+        <div class="vrow"><canvas id="wave" width="220" height="34"></canvas><button class="mic" data-act="voice">&#127908;</button></div>
+        <div class="vsub">Tap the mic to talk</div>
+      </div>
+
+      <div class="card mark">
+        <div class="suit">&#129302;</div>
+        <div><div class="mtitle">MARK 85</div><div class="msub">SYSTEM CHECK</div><div class="mval">100%</div></div>
+      </div>
+    </section>
+
+    <section class="cmdbar">
+      <input id="ask" type="text" autocomplete="off" placeholder="Ask J.A.R.V.I.S. anything…">
+      <button id="asksend">&#9656;</button>
+    </section>
+
+    <section class="quick">
+      <button data-act="screenshot"><span>&#128247;</span> Take Screenshot</button>
+      <button data-act="calculator"><span>&#128425;</span> Open Calculator</button>
+      <button data-act="weather"><span>&#9728;</span> Show Weather</button>
+      <button data-act="cleanup"><span>&#129529;</span> System Cleanup</button>
+      <button data-act="translate"><span>&#127760;</span> Translate Text</button>
+      <button data-act="music"><span>&#9835;</span> Play Music</button>
+    </section>
+
+    <section class="perf">
+      <div class="pcard"><div class="ph">CPU <b id="p-cpu">0%</b></div><canvas id="pf-cpu" width="300" height="54"></canvas></div>
+      <div class="pcard"><div class="ph">RAM <b id="p-ram">0%</b></div><canvas id="pf-ram" width="300" height="54"></canvas></div>
+      <div class="pcard"><div class="ph">DISK <b id="p-disk">0%</b></div><canvas id="pf-disk" width="300" height="54"></canvas></div>
+      <div class="pcard"><div class="ph">NETWORK <b id="p-net">0</b></div><canvas id="pf-net" width="300" height="54"></canvas></div>
+    </section>
+  </main>
+
+  <!-- ── RIGHT WIDGETS ───────────────────────────────────────────────────── -->
+  <aside class="widgets">
+    <div class="w">
+      <h3>SYSTEM OVERVIEW</h3>
+      <div class="ov">
+        <div class="gauge"><svg viewBox="0 0 120 120"><circle class="g-bg" cx="60" cy="60" r="52"/><circle class="g-fg" id="gauge" cx="60" cy="60" r="52"/></svg><div class="gtext"><b id="optimal">--%</b><span>OPTIMAL</span></div></div>
+        <div class="ovlist">
+          <div><span>OS</span><b id="os">—</b></div>
+          <div><span>UPTIME</span><b id="uptime">—</b></div>
+          <div><span>BATTERY</span><b id="battery">—</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="w">
+      <h3>WEATHER REPORT <small id="wcity"></small></h3>
+      <div class="wnow"><div class="wt" id="wtemp">--&deg;</div><div class="wd"><div id="wdesc">—</div><div class="wmeta">Feels <b id="wfeels">--</b> · Hum <b id="whum">--</b> · Wind <b id="wwind">--</b></div></div></div>
+      <div class="forecast" id="forecast"></div>
+    </div>
+
+    <div class="w">
+      <h3>NOTIFICATIONS</h3>
+      <div class="notif"><i class="ni ok"></i><div><b>System Update</b><span>Update available</span></div><time>10m</time></div>
+      <div class="notif"><i class="ni ok"></i><div><b>Security Scan</b><span>No threats found</span></div><time>1h</time></div>
+      <div class="notif"><i class="ni ok"></i><div><b>Backup Completed</b><span>Files backed up</span></div><time>3h</time></div>
+    </div>
+
+    <div class="w feed">
+      <h3>JARVIS FEED</h3>
+      <div class="feedbody">
+        <p id="feedmsg">Stay productive, Sir.<br>Shall I run a system diagnostic?</p>
+        <button id="feedrun">Run Now</button>
+      </div>
+    </div>
+  </aside>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

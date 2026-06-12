@@ -27,6 +27,11 @@ voices/*.onnx
 # Audio scratch files (Phase 4)
 *.wav
 
+# Personal images dropped into the dashboard centre, and screenshots it takes —
+# kept on your machine, not shared in the repo.
+assets/user.*
+assets/shots/
+
 # Python noise
 __pycache__/
 *.pyc

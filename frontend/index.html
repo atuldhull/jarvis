@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="state-idle">
+  <!-- the living core: arc reactor + rotating HUD rings (Canvas) -->
+  <canvas id="reactor"></canvas>
+  <div class="vignette"></div>
+  <div class="scanlines"></div>
+
+  <!-- top status strip -->
+  <header class="hud-bar">
+    <span class="brand">J.A.R.V.I.S</span>
+    <span class="status"><i class="dot"></i><span id="status-text">ONLINE</span></span>
+    <span class="brain" id="brain">LOCAL</span>
+  </header>
+
+  <!-- corner telemetry (real data gets wired in next; live readouts now) -->
+  <aside class="panel panel-tl">
+    <h2>SYSTEM</h2>
+    <div class="readout"><span>CORE</span><b id="r-core">—</b></div>
+    <div class="readout"><span>ROUTER</span><b id="r-router">local</b></div>
+    <div class="readout"><span>MODE</span><b id="r-mode">TEXT</b></div>
+    <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </aside>
+
+  <aside class="panel panel-tr">
+    <h2>DEPARTMENTS</h2>
+    <ul class="depts">
+      <li data-d="research"><i></i>research</li>
+      <li data-d="software"><i></i>software</li>
+      <li data-d="data"><i></i>data</li>
+      <li data-d="browser"><i></i>browser</li>
+      <li data-d="system"><i></i>system</li>
+    </ul>
+  </aside>
+
+  <!-- conversation console -->
+  <main class="console">
+    <div id="log" class="log"></div>
+    <form id="composer" class="composer">
+      <input id="input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="speak to JARVIS…" autofocus>
+      <button type="submit" class="send" title="send">&#9656;</button>
+    </form>
+  </main>
+
+  <!-- switch off → back to your normal desktop -->
+  <button id="power" class="power" title="switch off (Esc)">&#9211;</button>
+
+  <script src="hud.js"></script>
+</body>
+</html>
