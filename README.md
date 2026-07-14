@@ -1,5 +1,10 @@
 # JARVIS
 
+![Offline](https://img.shields.io/badge/runs-fully%20offline-success?style=flat-square)
+![Cost](https://img.shields.io/badge/cost-%E2%82%B90%2Fmonth-success?style=flat-square)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
+
 > My own Iron-Man-style assistant — a multi-agent **personal operating system** that listens,
 > talks back, remembers me, and **runs my computer** (browser, apps, WhatsApp, logins,
 > multi-step tasks). **Local-first and free**: it runs on my own laptop, works fully offline,
