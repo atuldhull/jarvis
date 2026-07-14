@@ -34,8 +34,10 @@ py voice_main.py      # hands-free: say "Hey Jarvis", then talk
   [docs/MEMORY.md](docs/MEMORY.md).
 - **Speaks my languages.** **English, Hindi, Kannada, Hinglish, and mixed** — it hears the
   language I spoke and replies in the same one. See [docs/MULTILINGUAL.md](docs/MULTILINGUAL.md).
-- **Has a real conversation.** Streaming voice with natural **turn-taking and interruptions**
-  (barge-in) — cut it off mid-sentence and it stops and listens.
+- **Has a real conversation.** Natural **turn-taking and interruptions** (barge-in), via LiveKit
+  + Silero VAD — cut it off mid-sentence and it stops and listens. Speech-to-text and speech
+  synthesis run per-utterance rather than streamed, so there's a beat before it answers; token
+  streaming is on the roadmap.
 - **Does things on the computer:** drives the browser (Playwright), sends/reads WhatsApp, opens
   apps and websites, plays YouTube, controls power (lock/sleep/shutdown), manages files, and
   searches the web — through a plan → act → observe tool loop.
