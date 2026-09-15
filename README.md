@@ -96,7 +96,7 @@ wrapper around the same brain — which is why the whole thing is fully usable b
 
 1. **Install [Ollama](https://ollama.com)** and pull the local brain + embeddings:
    ```powershell
-   ollama pull qwen2.5:7b
+   ollama pull qwen2.5:3b           # offline brain (fits a 6 GB GPU)
    ollama pull nomic-embed-text     # for semantic memory
    ```
 2. **Python** (3.11+; built on 3.13) + dependencies:

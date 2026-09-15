@@ -13,7 +13,7 @@
 py main.py                     # chat with JARVIS in the terminal
 ```
 Type to talk. `exit` / `quit` / `bye` (or Ctrl+C) leaves. The brain is whatever
-`config.MODEL` points at (currently `qwen2.5:7b`; switch to `qwen3.5:4b` once pulled).
+`config.MODEL` points at (currently `qwen2.5:3b`) whenever the cloud providers are unavailable.
 
 ## The files
 

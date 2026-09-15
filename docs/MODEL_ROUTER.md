@@ -109,12 +109,14 @@ Keys from both sources are merged and de-duplicated.
 In `config.py → PROVIDER_MODELS`. The defaults are free-tier picks; swap any of them:
 ```python
 PROVIDER_MODELS = {
-    "gemini": "gemini-2.0-flash",
-    "groq": "llama-3.3-70b-versatile",
-    "openrouter": "meta-llama/llama-3.3-70b-instruct:free",
+    "gemini": "gemini-2.5-flash-lite",
+    "groq": "openai/gpt-oss-120b",
+    "openrouter": "nvidia/nemotron-3.5-lightning:free",
     "local": MODEL,   # your Ollama model
 }
 ```
+Free-tier models get retired without much notice — in September 2026 Groq dropped
+`llama-3.3-70b-versatile` and OpenRouter pulled its free Llama 3.3, and both started returning 404s.
 If a model name is wrong for your account, that provider just errors and the router fails over
 — check the provider's model list and update the name.
 

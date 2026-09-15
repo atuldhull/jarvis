@@ -36,7 +36,22 @@ PAGE = os.path.join(HERE, "frontend", "dashboard.html")
 
 # Optional centre portrait — drop any image at assets/user.png and it appears in the HUD.
 USER_NAME = "STARK"
-_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+
+# Weather location (Open-Meteo needs coordinates). Defaults to Bengaluru — change freely.
+WEATHER_CITY = "Bengaluru"
+WEATHER_LAT, WEATHER_LON = 12.97, 77.59
+
+# Open-Meteo reports conditions as WMO weather codes.
+_WMO = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Fog", 51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    56: "Freezing drizzle", 57: "Freezing drizzle", 61: "Light rain", 63: "Rain",
+    65: "Heavy rain", 66: "Freezing rain", 67: "Freezing rain", 71: "Light snow",
+    73: "Snow", 75: "Heavy snow", 77: "Snow grains", 80: "Rain showers",
+    81: "Rain showers", 82: "Heavy showers", 85: "Snow showers", 86: "Snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with hail",
+}
+_MIME ={".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 
 
 def _photo_data_uri():
@@ -121,25 +136,53 @@ class JarvisAPI:
     def weather(self, refresh=False):
         if self._weather and not refresh:
             return self._weather
-        try:
-            req = urllib.request.Request("https://wttr.in/?format=j1",
-                                         headers={"User-Agent": "curl/8"})
-            data = json.loads(urllib.request.urlopen(req, timeout=6).read().decode())
-            cur = data["current_condition"][0]
-            days = []
-            for d in data["weather"][:4]:
-                days.append({"date": d["date"], "max": d["maxtempC"], "min": d["mintempC"]})
-            area = data.get("nearest_area", [{}])[0]
-            city = (area.get("areaName", [{}])[0].get("value", "")) if area else ""
-            self._weather = {
-                "temp": cur["temp_C"], "desc": cur["weatherDesc"][0]["value"],
-                "feels": cur["FeelsLikeC"], "humidity": cur["humidity"],
-                "wind": cur["windspeedKmph"], "city": city, "days": days,
-            }
-        except Exception as e:
-            self._weather = {"temp": "--", "desc": "offline", "feels": "--",
-                             "humidity": "--", "wind": "--", "city": "", "days": []}
+        # Open-Meteo first (free, no key, reliable); wttr.in as the backup.
+        for source in (self._open_meteo, self._wttr):
+            try:
+                self._weather = source()
+                return self._weather
+            except Exception as e:
+                print(f"[dashboard] weather via {source.__name__} failed: {e}", file=sys.stderr)
+        self._weather = {"temp": "--", "desc": "offline", "feels": "--",
+                         "humidity": "--", "wind": "--", "city": "", "days": []}
         return self._weather
+
+    def _open_meteo(self):
+        url = ("https://api.open-meteo.com/v1/forecast"
+               f"?latitude={WEATHER_LAT}&longitude={WEATHER_LON}"
+               "&current=temperature_2m,apparent_temperature,relative_humidity_2m,"
+               "wind_speed_10m,weather_code"
+               "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4")
+        req = urllib.request.Request(url, headers={"User-Agent": "JARVIS"})
+        data = json.loads(urllib.request.urlopen(req, timeout=6).read().decode())
+        cur, daily = data["current"], data["daily"]
+        days = [{"date": d, "max": str(round(hi)), "min": str(round(lo))}
+                for d, hi, lo in zip(daily["time"], daily["temperature_2m_max"],
+                                     daily["temperature_2m_min"])]
+        return {
+            "temp": str(round(cur["temperature_2m"])),
+            "desc": _WMO.get(cur["weather_code"], "Unknown"),
+            "feels": str(round(cur["apparent_temperature"])),
+            "humidity": str(round(cur["relative_humidity_2m"])),
+            "wind": str(round(cur["wind_speed_10m"])),
+            "city": WEATHER_CITY, "days": days,
+        }
+
+    def _wttr(self):
+        req = urllib.request.Request("https://wttr.in/?format=j1",
+                                     headers={"User-Agent": "curl/8"})
+        data = json.loads(urllib.request.urlopen(req, timeout=6).read().decode())
+        cur = data["current_condition"][0]
+        days = []
+        for d in data["weather"][:4]:
+            days.append({"date": d["date"], "max": d["maxtempC"], "min": d["mintempC"]})
+        area = data.get("nearest_area", [{}])[0]
+        city = (area.get("areaName", [{}])[0].get("value", "")) if area else ""
+        return {
+            "temp": cur["temp_C"], "desc": cur["weatherDesc"][0]["value"],
+            "feels": cur["FeelsLikeC"], "humidity": cur["humidity"],
+            "wind": cur["windspeedKmph"], "city": city, "days": days,
+        }
 
     # ── actions (each button) ──────────────────────────────────────────────────
     def ask(self, text):

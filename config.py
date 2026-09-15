@@ -8,10 +8,10 @@ As we add ears, voice, tools and memory, their settings land in this file too.
 # THE BRAIN (your local model, served by Ollama)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# The model JARVIS thinks with. You already have "qwen2.5:7b" installed, so we
-# start there. After you run  `ollama pull qwen3.5:4b`  switch this one line to
-# "qwen3.5:4b" (the verified primary brain) — nothing else needs to change.
-MODEL = "qwen2.5:7b"
+# The model JARVIS thinks with when offline (or when every cloud key is used up).
+# qwen2.5:3b fits entirely in a 6 GB GPU and answers fast; a non-thinking model
+# keeps replies snappy. Pull it with  `ollama pull qwen2.5:3b`.
+MODEL = "qwen2.5:3b"
 
 # Ollama runs a local server on your machine at this address. Leave it unless you
 # deliberately changed Ollama's host/port.
@@ -58,8 +58,8 @@ PROVIDER_PRIORITY = ["gemini", "groq", "openrouter", "local"]
 # Which model to use on each provider — all free-tier picks; swap freely.
 PROVIDER_MODELS = {
     "gemini": "gemini-2.5-flash-lite",  # verified free + reliable; 2.0-flash=no free tier, 2.5-flash=often 503
-    "groq": "llama-3.3-70b-versatile",          # verified working on the free tier
-    "openrouter": "meta-llama/llama-3.3-70b-instruct:free",
+    "groq": "openai/gpt-oss-120b",              # llama-3.3-70b-versatile was retired (404) in Sept 2026
+    "openrouter": "nvidia/nemotron-3.5-lightning:free",  # llama-3.3 free was pulled (404); gemma-4 free is 429-congested. Slow (~10-20s) but tool-calling works
     "local": MODEL,  # your Ollama model (set above)
 }
 
